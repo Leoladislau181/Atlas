@@ -20,6 +20,7 @@ export interface Vehicle {
   contract_start_date?: string;
   contract_end_date?: string;
   contract_initial_km?: number;
+  contract_km_limit?: number;
   profit_goal?: number;
   maintenance_reserve?: number;
   created_at: string;

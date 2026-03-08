@@ -28,6 +28,7 @@ export function Veiculos({ vehicles, lancamentos, refetch, userId }: VeiculosPro
   const [contractStartDate, setContractStartDate] = useState('');
   const [contractEndDate, setContractEndDate] = useState('');
   const [contractInitialKm, setContractInitialKm] = useState('');
+  const [contractKmLimit, setContractKmLimit] = useState('');
   const [profitGoalStr, setProfitGoalStr] = useState('');
   
   // Own specific
@@ -46,7 +47,24 @@ export function Veiculos({ vehicles, lancamentos, refetch, userId }: VeiculosPro
   const [renewStartDate, setRenewStartDate] = useState('');
   const [renewEndDate, setRenewEndDate] = useState('');
   const [renewInitialKm, setRenewInitialKm] = useState('');
+  const [renewContractKmLimit, setRenewContractKmLimit] = useState('');
+  const [addRemainingKm, setAddRemainingKm] = useState(false);
   const [renewProfitGoalStr, setRenewProfitGoalStr] = useState('');
+  
+  const [expandedInfo, setExpandedInfo] = useState<Record<string, boolean>>({});
+
+  const toggleInfo = (id: string) => {
+    setExpandedInfo(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const getDaysRemaining = (endDate?: string) => {
+    if (!endDate) return 0;
+    const end = new Date(endDate);
+    const today = new Date();
+    const diffTime = end.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,6 +89,7 @@ export function Veiculos({ vehicles, lancamentos, refetch, userId }: VeiculosPro
         payload.contract_start_date = contractStartDate || null;
         payload.contract_end_date = contractEndDate || null;
         payload.contract_initial_km = contractInitialKm ? Number(contractInitialKm) : null;
+        payload.contract_km_limit = contractKmLimit ? Number(contractKmLimit) : null;
         payload.profit_goal = parseCurrency(profitGoalStr);
         payload.maintenance_reserve = null;
       } else {
@@ -80,6 +99,7 @@ export function Veiculos({ vehicles, lancamentos, refetch, userId }: VeiculosPro
         payload.contract_start_date = null;
         payload.contract_end_date = null;
         payload.contract_initial_km = null;
+        payload.contract_km_limit = null;
       }
 
       if (editingId) {
@@ -110,6 +130,7 @@ export function Veiculos({ vehicles, lancamentos, refetch, userId }: VeiculosPro
     setContractStartDate('');
     setContractEndDate('');
     setContractInitialKm('');
+    setContractKmLimit('');
     setProfitGoalStr('');
     setMaintenanceReserveStr('');
     setEditingId(null);
@@ -130,6 +151,7 @@ export function Veiculos({ vehicles, lancamentos, refetch, userId }: VeiculosPro
       setContractStartDate(vehicle.contract_start_date || '');
       setContractEndDate(vehicle.contract_end_date || '');
       setContractInitialKm(vehicle.contract_initial_km?.toString() || '');
+      setContractKmLimit(vehicle.contract_km_limit?.toString() || '');
       setProfitGoalStr(formatCurrency(vehicle.profit_goal || 0));
       setMaintenanceReserveStr('');
     } else {
@@ -139,6 +161,7 @@ export function Veiculos({ vehicles, lancamentos, refetch, userId }: VeiculosPro
       setContractStartDate('');
       setContractEndDate('');
       setContractInitialKm('');
+      setContractKmLimit('');
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -153,6 +176,8 @@ export function Veiculos({ vehicles, lancamentos, refetch, userId }: VeiculosPro
     const metrics = calculateMetrics(vehicle);
     setRenewInitialKm(metrics.lastOdometer.toString());
     
+    setRenewContractKmLimit(vehicle.contract_km_limit?.toString() || '');
+    setAddRemainingKm(false);
     setRenewProfitGoalStr(formatCurrency(vehicle.profit_goal || 0));
     setRenewModalOpen(true);
   };
@@ -163,11 +188,24 @@ export function Veiculos({ vehicles, lancamentos, refetch, userId }: VeiculosPro
 
     setLoading(true);
     try {
+      let finalKmLimit = renewContractKmLimit ? Number(renewContractKmLimit) : null;
+
+      if (addRemainingKm && finalKmLimit !== null) {
+        const metrics = calculateMetrics(renewingVehicle);
+        const kmRodadoContrato = metrics.lastOdometer - (renewingVehicle.contract_initial_km || renewingVehicle.initial_odometer);
+        const kmRestante = (renewingVehicle.contract_km_limit || 0) - kmRodadoContrato;
+        
+        if (kmRestante > 0) {
+          finalKmLimit += kmRestante;
+        }
+      }
+
       const payload = {
         contract_value: parseCurrency(renewContractValueStr),
         contract_start_date: renewStartDate || null,
         contract_end_date: renewEndDate || null,
         contract_initial_km: renewInitialKm ? Number(renewInitialKm) : null,
+        contract_km_limit: finalKmLimit,
         profit_goal: parseCurrency(renewProfitGoalStr),
       };
 
@@ -401,6 +439,15 @@ export function Veiculos({ vehicles, lancamentos, refetch, userId }: VeiculosPro
                       onChange={(e) => setContractInitialKm(e.target.value)}
                     />
                   </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Franquia de KM (Limite)</label>
+                    <Input
+                      type="number"
+                      placeholder="Ex: 5000"
+                      value={contractKmLimit}
+                      onChange={(e) => setContractKmLimit(e.target.value)}
+                    />
+                  </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mt-4 p-4 bg-gray-50 rounded-lg border border-gray-100">
@@ -445,81 +492,144 @@ export function Veiculos({ vehicles, lancamentos, refetch, userId }: VeiculosPro
         )}
       </Card>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="flex flex-col gap-4">
         {sortedVehicles.map((v) => {
           const metrics = calculateMetrics(v);
           return (
-            <Card key={v.id} className={`overflow-hidden ${v.status !== 'active' ? 'opacity-75 grayscale-[0.5]' : ''}`}>
-              <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white rounded-lg shadow-sm">
-                    <Car className={`h-5 w-5 ${v.status === 'sold' ? 'text-red-500' : v.status === 'deactivated' ? 'text-gray-500' : 'text-[#F59E0B]'}`} />
+            <Card key={v.id} className={`overflow-hidden transition-all duration-200 ${v.status !== 'active' ? 'opacity-75 grayscale-[0.5]' : 'hover:shadow-md'}`}>
+              <div 
+                className="bg-white px-6 py-5 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => toggleInfo(v.id)}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`p-3 rounded-xl shadow-sm border ${v.status === 'sold' ? 'bg-red-50 border-red-100' : v.status === 'deactivated' ? 'bg-gray-100 border-gray-200' : 'bg-[#F59E0B]/10 border-[#F59E0B]/20'}`}>
+                    <Car className={`h-6 w-6 ${v.status === 'sold' ? 'text-red-500' : v.status === 'deactivated' ? 'text-gray-500' : 'text-[#F59E0B]'}`} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-gray-900">{v.name}</h3>
-                    <p className="text-xs text-gray-500 uppercase tracking-wider">
-                      {v.plate} • {v.type === 'own' ? 'Próprio' : 'Alugado'} 
-                      {v.status === 'sold' && <span className="ml-2 text-red-600 font-bold">• VENDIDO</span>}
-                      {v.status === 'deactivated' && <span className="ml-2 text-gray-600 font-bold">• DESATIVADO</span>}
-                    </p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-bold text-lg text-gray-900">{v.name}</h3>
+                      {expandedInfo[v.id] ? (
+                        <ChevronUp className="h-5 w-5 text-gray-400" />
+                      ) : (
+                        <ChevronDown className="h-5 w-5 text-gray-400" />
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-xs font-medium">
+                      <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-md uppercase tracking-wider">{v.plate}</span>
+                      <span className={`px-2 py-1 rounded-md uppercase tracking-wider ${v.type === 'own' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
+                        {v.type === 'own' ? 'Próprio' : 'Alugado'}
+                      </span>
+                      {v.status === 'sold' && <span className="bg-red-50 text-red-600 px-2 py-1 rounded-md uppercase tracking-wider">Vendido</span>}
+                      {v.status === 'deactivated' && <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-md uppercase tracking-wider">Desativado</span>}
+                    </div>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                
+                <div className="flex items-center gap-2 self-end sm:self-auto" onClick={(e) => e.stopPropagation()}>
                   {v.type === 'rented' && (
-                    <button onClick={() => handleOpenRenew(v)} className="text-gray-400 hover:text-[#059568]" title="Renovar Contrato">
-                      <RefreshCw className="h-4 w-4" />
-                    </button>
+                    <Button variant="outline" size="sm" onClick={() => handleOpenRenew(v)} className="text-[#059568] border-[#059568]/20 hover:bg-[#059568]/10" title="Renovar Contrato">
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Renovar
+                    </Button>
                   )}
-                  <button onClick={() => handleEdit(v)} className="text-gray-400 hover:text-[#F59E0B]" title="Editar">
+                  <Button variant="outline" size="icon" onClick={() => handleEdit(v)} className="text-[#F59E0B] border-[#F59E0B]/20 hover:bg-[#F59E0B]/10" title="Editar">
                     <Edit2 className="h-4 w-4" />
-                  </button>
-                  <button onClick={() => confirmDelete(v.id)} className="text-gray-400 hover:text-red-500" title="Excluir">
+                  </Button>
+                  <Button variant="outline" size="icon" onClick={() => confirmDelete(v.id)} className="text-red-500 border-red-200 hover:bg-red-50" title="Excluir">
                     <Trash2 className="h-4 w-4" />
-                  </button>
+                  </Button>
                 </div>
               </div>
-              <CardContent className="p-0">
-                <div className="grid grid-cols-2 divide-x divide-y border-b">
-                  <div className="p-4">
-                    <p className="text-xs text-gray-500 mb-1">Receitas</p>
-                    <p className="font-semibold text-[#059568]">{formatCurrency(metrics.totalReceitas)}</p>
+              
+              {expandedInfo[v.id] && (
+                <CardContent className="p-6 animate-in fade-in slide-in-from-top-2 duration-200 bg-gray-50/50 border-t border-gray-100">
+                  {/* Section: Financeiro */}
+                  <div className="mb-8">
+                    <h4 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-[#059568]"></span>
+                      Financeiro
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                        <p className="text-sm font-medium text-gray-500 mb-2">Lucro Líquido</p>
+                        <p className={`font-bold text-2xl ${metrics.lucroLiquido >= 0 ? 'text-[#059568]' : 'text-[#EF4444]'}`}>
+                          {formatCurrency(metrics.lucroLiquido)}
+                        </p>
+                      </div>
+                      <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                        <p className="text-sm font-medium text-gray-500 mb-2">Receitas</p>
+                        <p className="font-semibold text-xl text-[#059568]">{formatCurrency(metrics.totalReceitas)}</p>
+                      </div>
+                      <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                        <p className="text-sm font-medium text-gray-500 mb-2">Despesas</p>
+                        <p className="font-semibold text-xl text-[#EF4444]">{formatCurrency(metrics.totalDespesas)}</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="p-4">
-                    <p className="text-xs text-gray-500 mb-1">Despesas</p>
-                    <p className="font-semibold text-[#EF4444]">{formatCurrency(metrics.totalDespesas)}</p>
+
+                  {/* Section: Contrato */}
+                  {v.type === 'rented' && (
+                    <div className="mb-8">
+                      <h4 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                        Contrato de Aluguel
+                      </h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                          <p className="text-xs font-medium text-blue-600/80 mb-1">Dias Restantes</p>
+                          <p className="font-bold text-lg text-blue-700">{getDaysRemaining(v.contract_end_date)} dias</p>
+                        </div>
+                        <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                          <p className="text-xs font-medium text-blue-600/80 mb-1">KM Restante</p>
+                          <p className="font-bold text-lg text-blue-700">
+                            {v.contract_km_limit ? (v.contract_km_limit - (metrics.lastOdometer - (v.contract_initial_km || v.initial_odometer))).toLocaleString('pt-BR') : '-'} km
+                          </p>
+                        </div>
+                        <div className="bg-white p-4 rounded-xl border border-gray-200">
+                          <p className="text-xs font-medium text-gray-500 mb-1">Franquia de KM</p>
+                          <p className="font-semibold text-gray-900">{v.contract_km_limit ? v.contract_km_limit.toLocaleString('pt-BR') : '-'} km</p>
+                        </div>
+                        <div className="bg-white p-4 rounded-xl border border-gray-200">
+                          <p className="text-xs font-medium text-gray-500 mb-1">KM Inicial Contrato</p>
+                          <p className="font-semibold text-gray-900">{v.contract_initial_km ? v.contract_initial_km.toLocaleString('pt-BR') : '-'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Section: Uso e Consumo */}
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                      Uso e Consumo
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <div className="bg-white p-4 rounded-xl border border-gray-200">
+                        <p className="text-xs font-medium text-gray-500 mb-1">Último Odômetro</p>
+                        <p className="font-semibold text-gray-900">{metrics.lastOdometer.toLocaleString('pt-BR')}</p>
+                      </div>
+                      <div className="bg-white p-4 rounded-xl border border-gray-200">
+                        <p className="text-xs font-medium text-gray-500 mb-1">KM Rodado</p>
+                        <p className="font-semibold text-gray-900">{metrics.kmRodado.toLocaleString('pt-BR')} km</p>
+                      </div>
+                      <div className="bg-white p-4 rounded-xl border border-gray-200">
+                        <p className="text-xs font-medium text-gray-500 mb-1">Média Consumo</p>
+                        <p className="font-semibold text-gray-900">{metrics.mediaKmL} km/l</p>
+                      </div>
+                      <div className="bg-white p-4 rounded-xl border border-gray-200">
+                        <p className="text-xs font-medium text-gray-500 mb-1">Gasto Combustível</p>
+                        <p className="font-semibold text-gray-900">{formatCurrency(metrics.totalCombustivel)}</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="p-4 col-span-2 bg-gray-50/50">
-                    <p className="text-xs text-gray-500 mb-1">Lucro Líquido</p>
-                    <p className={`font-bold text-lg ${metrics.lucroLiquido >= 0 ? 'text-[#059568]' : 'text-[#EF4444]'}`}>
-                      {formatCurrency(metrics.lucroLiquido)}
-                    </p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 divide-x">
-                  <div className="p-4">
-                    <p className="text-xs text-gray-500 mb-1">Combustível</p>
-                    <p className="font-medium text-gray-900">{formatCurrency(metrics.totalCombustivel)}</p>
-                  </div>
-                  <div className="p-4">
-                    <p className="text-xs text-gray-500 mb-1">Média Consumo</p>
-                    <p className="font-medium text-gray-900">{metrics.mediaKmL} <span className="text-xs text-gray-500">km/l</span></p>
-                  </div>
-                  <div className="p-4 border-t">
-                    <p className="text-xs text-gray-500 mb-1">KM Rodado</p>
-                    <p className="font-medium text-gray-900">{metrics.kmRodado.toLocaleString('pt-BR')} <span className="text-xs text-gray-500">km</span></p>
-                  </div>
-                  <div className="p-4 border-t">
-                    <p className="text-xs text-gray-500 mb-1">Último Odômetro</p>
-                    <p className="font-medium text-gray-900">{metrics.lastOdometer.toLocaleString('pt-BR')}</p>
-                  </div>
-                </div>
-              </CardContent>
+                </CardContent>
+              )}
             </Card>
           );
         })}
         
         {vehicles.length === 0 && (
-          <div className="col-span-full py-12 text-center text-gray-500 bg-white rounded-xl border border-dashed">
+          <div className="py-12 text-center text-gray-500 bg-white rounded-xl border border-dashed">
             Nenhum veículo cadastrado ainda.
           </div>
         )}
@@ -594,6 +704,27 @@ export function Veiculos({ vehicles, lancamentos, refetch, userId }: VeiculosPro
               onChange={(e) => setRenewInitialKm(e.target.value)}
             />
             <p className="text-xs text-gray-500">O KM inicial foi preenchido automaticamente com o último odômetro registrado.</p>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">Nova Franquia de KM (Limite)</label>
+            <Input
+              type="number"
+              placeholder="Ex: 5000"
+              value={renewContractKmLimit}
+              onChange={(e) => setRenewContractKmLimit(e.target.value)}
+            />
+          </div>
+          <div className="flex items-center space-x-2 pt-2">
+            <input
+              type="checkbox"
+              id="addRemainingKm"
+              checked={addRemainingKm}
+              onChange={(e) => setAddRemainingKm(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-[#F59E0B] focus:ring-[#F59E0B]"
+            />
+            <label htmlFor="addRemainingKm" className="text-sm font-medium text-gray-700">
+              Somar KM restante do contrato anterior ao novo contrato?
+            </label>
           </div>
           <div className="flex justify-end space-x-3 pt-4">
             <Button type="button" variant="outline" onClick={() => setRenewModalOpen(false)}>
