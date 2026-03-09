@@ -312,6 +312,7 @@ export function Dashboard({ lancamentos, categorias, vehicles, refetch, userId }
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Valor Pago (R$)</label>
               <Input
                 type="text"
+                inputMode="decimal"
                 value={quickValueStr}
                 onChange={(e) => setQuickValueStr(formatCurrencyInput(e.target.value))}
                 placeholder="R$ 0,00"
@@ -324,6 +325,7 @@ export function Dashboard({ lancamentos, categorias, vehicles, refetch, userId }
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Preço por Litro</label>
               <Input
                 type="text"
+                inputMode="decimal"
                 value={quickPricePerLiterStr}
                 onChange={(e) => setQuickPricePerLiterStr(formatCurrencyInput(e.target.value))}
                 placeholder="R$ 0,00"
@@ -335,6 +337,7 @@ export function Dashboard({ lancamentos, categorias, vehicles, refetch, userId }
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">KM Atual</label>
             <Input
               type="number"
+              inputMode="numeric"
               value={quickKM}
               onChange={(e) => setQuickKM(e.target.value)}
               placeholder="0"

@@ -206,6 +206,7 @@ export function Configuracoes({ categorias, user, refetch }: ConfiguracoesProps)
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Telefone</label>
                     <Input 
                       type="tel" 
+                      inputMode="tel"
                       value={profileTelefone} 
                       onChange={(e) => setProfileTelefone(e.target.value)} 
                       placeholder="(00) 00000-0000" 

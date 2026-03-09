@@ -303,6 +303,7 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, userId
                 </label>
                 <Input
                   type="text"
+                  inputMode="decimal"
                   placeholder="R$ 0,00"
                   value={valorStr}
                   onChange={handleValorChange}
@@ -352,6 +353,7 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, userId
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Odômetro Atual (KM) *</label>
                     <Input
                       type="number"
+                      inputMode="numeric"
                       placeholder="Ex: 50100"
                       value={odometer}
                       onChange={(e) => setOdometer(e.target.value)}
@@ -366,6 +368,7 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, userId
                       <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Valor por Litro</label>
                       <Input
                         type="text"
+                        inputMode="decimal"
                         placeholder="R$ 0,00"
                         value={fuelPricePerLiterStr}
                         onChange={(e) => setFuelPricePerLiterStr(formatCurrencyInput(e.target.value))}

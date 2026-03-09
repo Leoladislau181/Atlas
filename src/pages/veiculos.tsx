@@ -386,6 +386,7 @@ export function Veiculos({ vehicles, lancamentos, refetch, userId }: VeiculosPro
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Odômetro Inicial (KM) *</label>
                   <Input
                     type="number"
+                    inputMode="numeric"
                     placeholder="Ex: 50000"
                     value={initialOdometer}
                     onChange={(e) => setInitialOdometer(e.target.value)}
@@ -400,6 +401,7 @@ export function Veiculos({ vehicles, lancamentos, refetch, userId }: VeiculosPro
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Valor do Contrato</label>
                     <Input
                       type="text"
+                      inputMode="decimal"
                       placeholder="R$ 0,00"
                       value={contractValueStr}
                       onChange={(e) => setContractValueStr(formatCurrencyInput(e.target.value))}
@@ -409,6 +411,7 @@ export function Veiculos({ vehicles, lancamentos, refetch, userId }: VeiculosPro
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Meta de Lucro</label>
                     <Input
                       type="text"
+                      inputMode="decimal"
                       placeholder="R$ 0,00"
                       value={profitGoalStr}
                       onChange={(e) => setProfitGoalStr(formatCurrencyInput(e.target.value))}
@@ -434,6 +437,7 @@ export function Veiculos({ vehicles, lancamentos, refetch, userId }: VeiculosPro
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">KM Inicial Contrato</label>
                     <Input
                       type="number"
+                      inputMode="numeric"
                       placeholder="Ex: 50000"
                       value={contractInitialKm}
                       onChange={(e) => setContractInitialKm(e.target.value)}
@@ -443,6 +447,7 @@ export function Veiculos({ vehicles, lancamentos, refetch, userId }: VeiculosPro
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Franquia de KM (Limite)</label>
                     <Input
                       type="number"
+                      inputMode="numeric"
                       placeholder="Ex: 5000"
                       value={contractKmLimit}
                       onChange={(e) => setContractKmLimit(e.target.value)}
@@ -455,6 +460,7 @@ export function Veiculos({ vehicles, lancamentos, refetch, userId }: VeiculosPro
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Meta de Lucro Mensal</label>
                     <Input
                       type="text"
+                      inputMode="decimal"
                       placeholder="R$ 0,00"
                       value={profitGoalStr}
                       onChange={(e) => setProfitGoalStr(formatCurrencyInput(e.target.value))}
@@ -464,6 +470,7 @@ export function Veiculos({ vehicles, lancamentos, refetch, userId }: VeiculosPro
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Reserva Manutenção Mensal</label>
                     <Input
                       type="text"
+                      inputMode="decimal"
                       placeholder="R$ 0,00"
                       value={maintenanceReserveStr}
                       onChange={(e) => setMaintenanceReserveStr(formatCurrencyInput(e.target.value))}
@@ -663,6 +670,7 @@ export function Veiculos({ vehicles, lancamentos, refetch, userId }: VeiculosPro
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Novo Valor do Contrato</label>
             <Input
               type="text"
+              inputMode="decimal"
               placeholder="R$ 0,00"
               value={renewContractValueStr}
               onChange={(e) => setRenewContractValueStr(formatCurrencyInput(e.target.value))}
@@ -672,6 +680,7 @@ export function Veiculos({ vehicles, lancamentos, refetch, userId }: VeiculosPro
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Nova Meta de Lucro</label>
             <Input
               type="text"
+              inputMode="decimal"
               placeholder="R$ 0,00"
               value={renewProfitGoalStr}
               onChange={(e) => setRenewProfitGoalStr(formatCurrencyInput(e.target.value))}
@@ -699,6 +708,7 @@ export function Veiculos({ vehicles, lancamentos, refetch, userId }: VeiculosPro
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Novo KM Inicial do Contrato</label>
             <Input
               type="number"
+              inputMode="numeric"
               placeholder="Ex: 50000"
               value={renewInitialKm}
               onChange={(e) => setRenewInitialKm(e.target.value)}
@@ -709,6 +719,7 @@ export function Veiculos({ vehicles, lancamentos, refetch, userId }: VeiculosPro
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Nova Franquia de KM (Limite)</label>
             <Input
               type="number"
+              inputMode="numeric"
               placeholder="Ex: 5000"
               value={renewContractKmLimit}
               onChange={(e) => setRenewContractKmLimit(e.target.value)}
