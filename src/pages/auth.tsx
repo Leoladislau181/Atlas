@@ -58,8 +58,13 @@ export function Auth() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-950 p-4 sm:p-8 transition-colors duration-200">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#F59E0B] to-[#D97706] shadow-lg mb-6">
-            <ShieldCheck className="h-8 w-8 text-white" />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-lg mb-6 overflow-hidden">
+            <img 
+              src="/Logo.png" 
+              alt="Atlas Logo" 
+              className="h-full w-full object-contain"
+              referrerPolicy="no-referrer"
+            />
           </div>
           <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
             Atlas Financeiro

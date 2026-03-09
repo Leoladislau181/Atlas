@@ -8,15 +8,15 @@
   "theme_color": "#F59E0B",
   "icons": [
     {
-      "src": "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/wallet.svg",
+      "src": "/Logo.png",
       "sizes": "192x192",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/wallet.svg",
+      "src": "/Logo.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]
