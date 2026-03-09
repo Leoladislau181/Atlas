@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { formatCurrency, parseLocalDate } from '@/lib/utils';
 import { Lancamento, Vehicle } from '@/types';
-import { format, isWithinInterval, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { format, isWithinInterval, startOfMonth, endOfMonth, subMonths, eachMonthOfInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Filter, TrendingUp, TrendingDown, DollarSign, Wallet, ChevronDown, ChevronUp } from 'lucide-react';
@@ -21,6 +22,14 @@ export function Relatorios({ lancamentos, vehicles }: RelatoriosProps) {
   const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [chartMonthsFilter, setChartMonthsFilter] = useState<number>(6);
+  const [showChartFilter, setShowChartFilter] = useState(false);
+
+  useEffect(() => {
+    if (window.innerWidth < 768) {
+      setChartMonthsFilter(3);
+    }
+  }, []);
 
   const filteredLancamentos = useMemo(() => {
     let start: Date;
@@ -99,12 +108,12 @@ export function Relatorios({ lancamentos, vehicles }: RelatoriosProps) {
   }, [filteredLancamentos, lancamentos, filterType, selectedMonth, endDate, selectedVehicleId]);
 
   const chartData = useMemo(() => {
-    // Generate last 6 months data
     const data = [];
-    for (let i = 5; i >= 0; i--) {
-      const date = subMonths(new Date(), i);
-      const start = startOfMonth(date);
-      const end = endOfMonth(date);
+    const now = new Date();
+    for (let i = chartMonthsFilter - 1; i >= 0; i--) {
+      const targetMonth = subMonths(now, i);
+      const start = startOfMonth(targetMonth);
+      const end = endOfMonth(targetMonth);
       
       let receitas = 0;
       let despesas = 0;
@@ -120,13 +129,13 @@ export function Relatorios({ lancamentos, vehicles }: RelatoriosProps) {
       });
 
       data.push({
-        name: format(date, 'MMM/yy', { locale: ptBR }).toUpperCase(),
+        name: format(targetMonth, 'MMM/yy', { locale: ptBR }).toUpperCase(),
         Receitas: receitas,
         Despesas: despesas,
       });
     }
     return data;
-  }, [lancamentos]);
+  }, [lancamentos, chartMonthsFilter, selectedVehicleId]);
 
   return (
     <div className="space-y-6">
@@ -322,8 +331,40 @@ export function Relatorios({ lancamentos, vehicles }: RelatoriosProps) {
       </div>
 
       <Card className="border-none shadow-sm bg-white">
-        <CardHeader className="border-b border-gray-50 pb-4">
-          <CardTitle className="text-lg">Comparativo Mensal (Últimos 6 meses)</CardTitle>
+        <CardHeader className="border-b border-gray-50 pb-4 flex flex-row items-center justify-between">
+          <CardTitle className="text-lg">Comparativo Mensal</CardTitle>
+          <div className="relative">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setShowChartFilter(!showChartFilter)} 
+              className="text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+            >
+              <Filter className="h-4 w-4" />
+            </Button>
+            {showChartFilter && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 z-10 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="py-1">
+                  {[1, 3, 6, 12].map((months) => (
+                    <button
+                      key={months}
+                      onClick={() => {
+                        setChartMonthsFilter(months);
+                        setShowChartFilter(false);
+                      }}
+                      className={`block w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                        chartMonthsFilter === months 
+                          ? 'bg-blue-50 text-blue-700 font-medium' 
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      Últimos {months} {months === 1 ? 'mês' : 'meses'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="pt-6">
           <div className="h-[300px] w-full">
