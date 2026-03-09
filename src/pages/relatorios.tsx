@@ -7,7 +7,7 @@ import { Lancamento, Vehicle } from '@/types';
 import { format, isWithinInterval, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { Filter, TrendingUp, TrendingDown, DollarSign, Wallet } from 'lucide-react';
+import { Filter, TrendingUp, TrendingDown, DollarSign, Wallet, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface RelatoriosProps {
   lancamentos: Lancamento[];
@@ -20,6 +20,7 @@ export function Relatorios({ lancamentos, vehicles }: RelatoriosProps) {
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('all');
+  const [showFilters, setShowFilters] = useState(false);
 
   const filteredLancamentos = useMemo(() => {
     let start: Date;
@@ -129,77 +130,91 @@ export function Relatorios({ lancamentos, vehicles }: RelatoriosProps) {
 
   return (
     <div className="space-y-6">
-      <Card className="border-none shadow-sm bg-white">
-        <CardHeader className="pb-4 border-b border-gray-50">
-          <div className="flex items-center gap-2">
+      <Card className="border-none shadow-sm bg-white overflow-hidden">
+        <div 
+          className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+          onClick={() => setShowFilters(!showFilters)}
+        >
+          <div className="flex items-center gap-3">
             <div className="p-2 bg-[#F59E0B]/10 rounded-lg">
               <Filter className="h-5 w-5 text-[#F59E0B]" />
             </div>
-            <CardTitle>Filtros de Relatório</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Tipo de Filtro</label>
-              <Select value={filterType} onChange={(e) => setFilterType(e.target.value as any)}>
-                <option value="month">Por Mês</option>
-                <option value="custom">Período Personalizado</option>
-              </Select>
+            <div>
+              <h3 className="font-bold text-gray-900">Filtros de Relatório</h3>
+              <p className="text-xs text-gray-500">
+                {showFilters ? 'Ocultar filtros' : 'Clique para filtrar por período ou veículo'}
+              </p>
             </div>
+          </div>
+          <button className="text-gray-400 hover:text-gray-600">
+            {showFilters ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+          </button>
+        </div>
 
-            {filterType === 'month' ? (
+        {showFilters && (
+          <CardContent className="pt-6 border-t border-gray-100 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Mês</label>
-                <Input
-                  type="month"
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                />
+                <label className="text-sm font-medium text-gray-700">Tipo de Filtro</label>
+                <Select value={filterType} onChange={(e) => setFilterType(e.target.value as any)}>
+                  <option value="month">Por Mês</option>
+                  <option value="custom">Período Personalizado</option>
+                </Select>
               </div>
-            ) : (
-              <>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Data Inicial</label>
-                  <Input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Data Final</label>
-                  <Input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                  />
-                </div>
-              </>
-            )}
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Veículo</label>
-              <Select value={selectedVehicleId} onChange={(e) => setSelectedVehicleId(e.target.value)}>
-                <option value="all">Todos os Veículos</option>
-                {vehicles.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.name} ({v.plate})
-                  </option>
-                ))}
-              </Select>
+              {filterType === 'month' ? (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Mês</label>
+                  <Input
+                    type="month"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                  />
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Data Inicial</label>
+                    <Input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Data Final</label>
+                    <Input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Veículo</label>
+                <Select value={selectedVehicleId} onChange={(e) => setSelectedVehicleId(e.target.value)}>
+                  <option value="all">Todos os Veículos</option>
+                  {vehicles.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.name} ({v.plate})
+                    </option>
+                  ))}
+                </Select>
+              </div>
             </div>
-          </div>
-        </CardContent>
+          </CardContent>
+        )}
       </Card>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-none shadow-sm bg-white hover:shadow-md transition-all duration-200">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium text-gray-500">Total Receitas</CardTitle>
+        <Card className="border-none shadow-sm bg-white hover:shadow-md transition-all duration-200 text-center">
+          <CardHeader className="pb-2 flex flex-row items-center justify-center gap-2 space-y-0">
             <div className="p-2 bg-green-50 rounded-full">
               <TrendingUp className="h-4 w-4 text-[#059568]" />
             </div>
+            <CardTitle className="text-sm font-medium text-gray-500">Total Receitas</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-[#059568]">
@@ -207,12 +222,12 @@ export function Relatorios({ lancamentos, vehicles }: RelatoriosProps) {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-none shadow-sm bg-white hover:shadow-md transition-all duration-200">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium text-gray-500">Total Despesas</CardTitle>
+        <Card className="border-none shadow-sm bg-white hover:shadow-md transition-all duration-200 text-center">
+          <CardHeader className="pb-2 flex flex-row items-center justify-center gap-2 space-y-0">
             <div className="p-2 bg-red-50 rounded-full">
               <TrendingDown className="h-4 w-4 text-[#EF4444]" />
             </div>
+            <CardTitle className="text-sm font-medium text-gray-500">Total Despesas</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-[#EF4444]">
@@ -220,12 +235,12 @@ export function Relatorios({ lancamentos, vehicles }: RelatoriosProps) {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-none shadow-sm bg-white hover:shadow-md transition-all duration-200">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium text-gray-500">Lucro Líquido</CardTitle>
+        <Card className="border-none shadow-sm bg-white hover:shadow-md transition-all duration-200 text-center">
+          <CardHeader className="pb-2 flex flex-row items-center justify-center gap-2 space-y-0">
             <div className={`p-2 rounded-full ${stats.lucroLiquido >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
               <DollarSign className={`h-4 w-4 ${stats.lucroLiquido >= 0 ? 'text-[#059568]' : 'text-[#EF4444]'}`} />
             </div>
+            <CardTitle className="text-sm font-medium text-gray-500">Lucro Líquido</CardTitle>
           </CardHeader>
           <CardContent>
             <div
@@ -237,12 +252,12 @@ export function Relatorios({ lancamentos, vehicles }: RelatoriosProps) {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-none shadow-sm bg-white hover:shadow-md transition-all duration-200">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium text-gray-500">Saldo Acumulado</CardTitle>
+        <Card className="border-none shadow-sm bg-white hover:shadow-md transition-all duration-200 text-center">
+          <CardHeader className="pb-2 flex flex-row items-center justify-center gap-2 space-y-0">
             <div className={`p-2 rounded-full ${stats.saldoAcumulado >= 0 ? 'bg-gray-100' : 'bg-red-50'}`}>
               <Wallet className={`h-4 w-4 ${stats.saldoAcumulado >= 0 ? 'text-gray-900' : 'text-[#EF4444]'}`} />
             </div>
+            <CardTitle className="text-sm font-medium text-gray-500">Saldo Acumulado</CardTitle>
           </CardHeader>
           <CardContent>
             <div

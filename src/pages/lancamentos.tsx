@@ -7,7 +7,7 @@ import { Modal } from '@/components/ui/modal';
 import { formatCurrency, formatCurrencyInput, parseCurrency, parseLocalDate } from '@/lib/utils';
 import { Categoria, Lancamento, TipoLancamento, Vehicle } from '@/types';
 import { supabase } from '@/lib/supabase';
-import { Edit2, Trash2, Car, Plus, ChevronUp } from 'lucide-react';
+import { Edit2, Trash2, Car, Plus, ChevronUp, Filter } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface LancamentosProps {
@@ -44,6 +44,7 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, userId
   const [filterTipo, setFilterTipo] = useState<'all' | 'receita' | 'despesa'>('all');
   const [filterCategoriaId, setFilterCategoriaId] = useState('all');
   const [filterVehicleId, setFilterVehicleId] = useState('all');
+  const [showFilters, setShowFilters] = useState(false);
 
   const filteredCategorias = categorias.filter((c) => c.tipo === tipo);
 
@@ -419,63 +420,91 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, userId
 
       <Card className="border-none shadow-sm">
         <CardHeader className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-          <CardTitle>Histórico de Lançamentos</CardTitle>
+          <div className="flex items-center justify-between w-full md:w-auto">
+            <CardTitle>Histórico de Lançamentos</CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className="md:hidden text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Filtros
+            </Button>
+          </div>
           
-          <div className="grid grid-cols-2 gap-2 md:flex md:items-center md:space-x-2">
-            <div className="space-y-1">
-              <label className="text-[10px] font-medium text-gray-500 uppercase">Mês</label>
-              <Input
-                type="month"
-                value={filterMonth}
-                onChange={(e) => setFilterMonth(e.target.value)}
-                className="h-8 text-xs"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-medium text-gray-500 uppercase">Tipo</label>
-              <Select
-                value={filterTipo}
-                onChange={(e) => setFilterTipo(e.target.value as any)}
-                className="h-8 text-xs"
-              >
-                <option value="all">Todos</option>
-                <option value="receita">Receitas</option>
-                <option value="despesa">Despesas</option>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-medium text-gray-500 uppercase">Categoria</label>
-              <Select
-                value={filterCategoriaId}
-                onChange={(e) => setFilterCategoriaId(e.target.value)}
-                className="h-8 text-xs"
-              >
-                <option value="all">Todas</option>
-                {categorias.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-medium text-gray-500 uppercase">Veículo</label>
-              <Select
-                value={filterVehicleId}
-                onChange={(e) => setFilterVehicleId(e.target.value)}
-                className="h-8 text-xs"
-              >
-                <option value="all">Todos</option>
-                {vehicles.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
+          <div className="hidden md:flex items-center space-x-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className="text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Filtros
+            </Button>
           </div>
         </CardHeader>
-        <CardContent>
+
+        {showFilters && (
+          <CardContent className="pt-0 pb-4 border-b border-gray-50 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="grid grid-cols-2 gap-4 md:flex md:items-center md:space-x-4">
+              <div className="space-y-1.5 flex-1">
+                <label className="text-xs font-medium text-gray-500 uppercase">Mês</label>
+                <Input
+                  type="month"
+                  value={filterMonth}
+                  onChange={(e) => setFilterMonth(e.target.value)}
+                  className="h-9"
+                />
+              </div>
+              <div className="space-y-1.5 flex-1">
+                <label className="text-xs font-medium text-gray-500 uppercase">Tipo</label>
+                <Select
+                  value={filterTipo}
+                  onChange={(e) => setFilterTipo(e.target.value as any)}
+                  className="h-9"
+                >
+                  <option value="all">Todos</option>
+                  <option value="receita">Receitas</option>
+                  <option value="despesa">Despesas</option>
+                </Select>
+              </div>
+              <div className="space-y-1.5 flex-1">
+                <label className="text-xs font-medium text-gray-500 uppercase">Categoria</label>
+                <Select
+                  value={filterCategoriaId}
+                  onChange={(e) => setFilterCategoriaId(e.target.value)}
+                  className="h-9"
+                >
+                  <option value="all">Todas</option>
+                  {categorias.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nome}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div className="space-y-1.5 flex-1">
+                <label className="text-xs font-medium text-gray-500 uppercase">Veículo</label>
+                <Select
+                  value={filterVehicleId}
+                  onChange={(e) => setFilterVehicleId(e.target.value)}
+                  className="h-9"
+                >
+                  <option value="all">Todos</option>
+                  {vehicles.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        )}
+
+        <CardContent className={showFilters ? "pt-6" : "pt-6"}>
           {/* Desktop Table View */}
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-sm text-gray-600">

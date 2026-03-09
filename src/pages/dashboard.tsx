@@ -86,10 +86,10 @@ export function Dashboard({ lancamentos }: DashboardProps) {
   return (
     <div className="space-y-6">
       <div className="grid gap-6 md:grid-cols-3">
-        <Card className="border-none shadow-sm hover:shadow-md transition-all duration-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Receitas do Mês</CardTitle>
+        <Card className="border-none shadow-sm hover:shadow-md transition-all duration-200 text-center">
+          <CardHeader className="flex flex-row items-center justify-center gap-2 space-y-0 pb-2">
             <ArrowUpCircle className="h-4 w-4 text-[#059568]" />
+            <CardTitle className="text-sm font-medium text-gray-500">Receitas do Mês</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-[#059568]">
@@ -98,10 +98,10 @@ export function Dashboard({ lancamentos }: DashboardProps) {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-sm hover:shadow-md transition-all duration-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Despesas do Mês</CardTitle>
+        <Card className="border-none shadow-sm hover:shadow-md transition-all duration-200 text-center">
+          <CardHeader className="flex flex-row items-center justify-center gap-2 space-y-0 pb-2">
             <ArrowDownCircle className="h-4 w-4 text-[#EF4444]" />
+            <CardTitle className="text-sm font-medium text-gray-500">Despesas do Mês</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-[#EF4444]">
@@ -110,10 +110,10 @@ export function Dashboard({ lancamentos }: DashboardProps) {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-sm hover:shadow-md transition-all duration-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Lucro Líquido</CardTitle>
+        <Card className="border-none shadow-sm hover:shadow-md transition-all duration-200 text-center">
+          <CardHeader className="flex flex-row items-center justify-center gap-2 space-y-0 pb-2">
             <DollarSign className={`h-4 w-4 ${stats.lucroLiquido >= 0 ? 'text-[#059568]' : 'text-[#EF4444]'}`} />
+            <CardTitle className="text-sm font-medium text-gray-500">Lucro Líquido</CardTitle>
           </CardHeader>
           <CardContent>
             <div
