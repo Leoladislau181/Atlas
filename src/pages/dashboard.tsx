@@ -2,12 +2,12 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatCurrency, formatCurrencyInput, parseCurrency, parseLocalDate } from '@/lib/utils';
-import { Lancamento, Categoria, Vehicle } from '@/types';
+import { Lancamento, Categoria, Vehicle, Manutencao } from '@/types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { startOfMonth, endOfMonth, isWithinInterval, format, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-import { ArrowUpCircle, ArrowDownCircle, DollarSign, Wallet, Filter, Zap, Fuel } from 'lucide-react';
+import { ArrowUpCircle, ArrowDownCircle, DollarSign, Wallet, Filter, Zap, Fuel, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -17,11 +17,12 @@ interface DashboardProps {
   lancamentos: Lancamento[];
   categorias: Categoria[];
   vehicles: Vehicle[];
+  manutencoes: Manutencao[];
   refetch: () => void;
   userId: string;
 }
 
-export function Dashboard({ lancamentos, categorias, vehicles, refetch, userId }: DashboardProps) {
+export function Dashboard({ lancamentos, categorias, vehicles, manutencoes, refetch, userId }: DashboardProps) {
   const now = new Date();
   const start = startOfMonth(now);
   const end = endOfMonth(now);
@@ -34,6 +35,15 @@ export function Dashboard({ lancamentos, categorias, vehicles, refetch, userId }
   const [quickPricePerLiterStr, setQuickPricePerLiterStr] = useState('');
   const [quickVehicleId, setQuickVehicleId] = useState('');
   const [quickLoading, setQuickLoading] = useState(false);
+
+  const [performModalOpen, setPerformModalOpen] = useState(false);
+  const [performManutencao, setPerformManutencao] = useState<Manutencao | null>(null);
+  const [performVehicle, setPerformVehicle] = useState<Vehicle | null>(null);
+  const [performDate, setPerformDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [performKm, setPerformKm] = useState('');
+  const [performValueStr, setPerformValueStr] = useState('');
+  const [performObs, setPerformObs] = useState('');
+  const [performLoading, setPerformLoading] = useState(false);
 
   useEffect(() => {
     if (vehicles.length > 0) {
@@ -165,6 +175,94 @@ export function Dashboard({ lancamentos, categorias, vehicles, refetch, userId }
     return data;
   }, [lancamentos, monthsFilter, now]);
 
+  const maintenanceAlerts = useMemo(() => {
+    const alerts: { vehicle: Vehicle; manutencao: Manutencao; kmFaltante: number; status: 'warning' | 'danger'; currentOdometer: number }[] = [];
+    
+    manutencoes.forEach(m => {
+      const vehicle = vehicles.find(v => v.id === m.vehicle_id);
+      if (!vehicle) return;
+
+      // Find current odometer for this vehicle
+      const vLancamentos = lancamentos.filter(l => l.vehicle_id === vehicle.id && l.odometer);
+      let currentOdometer = vehicle.initial_odometer;
+      
+      if (vLancamentos.length > 0) {
+        currentOdometer = Math.max(...vLancamentos.map(l => l.odometer || 0), currentOdometer);
+      }
+
+      const kmProximaManutencao = m.ultimo_km_realizado + m.intervalo_km;
+      const kmFaltante = kmProximaManutencao - currentOdometer;
+
+      if (kmFaltante <= 0) {
+        alerts.push({ vehicle, manutencao: m, kmFaltante, status: 'danger', currentOdometer });
+      } else if (kmFaltante <= (m.aviso_km_antes || 1000)) {
+        alerts.push({ vehicle, manutencao: m, kmFaltante, status: 'warning', currentOdometer });
+      }
+    });
+
+    return alerts.sort((a, b) => a.kmFaltante - b.kmFaltante);
+  }, [manutencoes, vehicles, lancamentos]);
+
+  const handleOpenPerform = (alert: any) => {
+    setPerformManutencao(alert.manutencao);
+    setPerformVehicle(alert.vehicle);
+    setPerformDate(format(new Date(), 'yyyy-MM-dd'));
+    setPerformKm(alert.currentOdometer.toString());
+    setPerformValueStr('');
+    setPerformObs(`Manutenção: ${alert.manutencao.tipo}`);
+    setPerformModalOpen(true);
+  };
+
+  const handleConfirmPerform = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!performManutencao || !performVehicle || !performKm || !performValueStr || !performDate) return;
+
+    const valorNum = parseCurrency(performValueStr);
+    if (valorNum <= 0) {
+      alert('O valor deve ser maior que zero.');
+      return;
+    }
+
+    const maintCategory = categorias.find(c => c.nome.toLowerCase().includes('manuten'));
+    if (!maintCategory) {
+      alert('Categoria "Manutenção" não encontrada. Por favor, crie uma categoria de despesa com esse nome primeiro nas configurações.');
+      return;
+    }
+
+    setPerformLoading(true);
+    try {
+      // 1. Update Manutencao
+      const { error: maintError } = await supabase
+        .from('manutencoes')
+        .update({ ultimo_km_realizado: Number(performKm) })
+        .eq('id', performManutencao.id);
+      if (maintError) throw maintError;
+
+      // 2. Insert Lancamento
+      const { error: lancError } = await supabase
+        .from('lancamentos')
+        .insert([{
+          user_id: userId,
+          tipo: 'despesa',
+          categoria_id: maintCategory.id,
+          vehicle_id: performVehicle.id,
+          valor: valorNum,
+          data: performDate,
+          odometer: Number(performKm),
+          observacao: performObs
+        }]);
+      if (lancError) throw lancError;
+
+      setPerformModalOpen(false);
+      refetch();
+      alert('Manutenção registrada com sucesso!');
+    } catch (error: any) {
+      alert(error.message || 'Erro ao registrar manutenção.');
+    } finally {
+      setPerformLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -178,6 +276,43 @@ export function Dashboard({ lancamentos, categorias, vehicles, refetch, userId }
           <span className="sm:hidden">Rápido</span>
         </Button>
       </div>
+
+      {maintenanceAlerts.length > 0 && (
+        <div className="grid grid-cols-1 gap-3">
+          {maintenanceAlerts.map((alert, idx) => (
+            <div 
+              key={idx} 
+              className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border ${
+                alert.status === 'danger' 
+                  ? 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800/50' 
+                  : 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800/50'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <AlertTriangle className={`h-6 w-6 shrink-0 ${alert.status === 'danger' ? 'text-red-500 dark:text-red-400' : 'text-yellow-500 dark:text-yellow-400'}`} />
+                <div>
+                  <h4 className={`font-bold ${alert.status === 'danger' ? 'text-red-800 dark:text-red-300' : 'text-yellow-800 dark:text-yellow-300'}`}>
+                    {alert.status === 'danger' ? 'Manutenção Atrasada!' : 'Atenção: Manutenção Próxima'}
+                  </h4>
+                  <p className={`text-sm ${alert.status === 'danger' ? 'text-red-600 dark:text-red-400' : 'text-yellow-700 dark:text-yellow-400'}`}>
+                    {alert.manutencao.tipo} do veículo <strong>{alert.vehicle.name}</strong>. 
+                    {alert.status === 'danger' 
+                      ? ` Passou ${Math.abs(alert.kmFaltante).toLocaleString('pt-BR')} km do limite.` 
+                      : ` Faltam apenas ${alert.kmFaltante.toLocaleString('pt-BR')} km.`}
+                  </p>
+                </div>
+              </div>
+              <Button 
+                onClick={() => handleOpenPerform(alert)}
+                className={`shrink-0 self-start sm:self-auto ${alert.status === 'danger' ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-yellow-600 hover:bg-yellow-700 text-white'}`}
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Realizar
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6">
         <Card className="col-span-2 md:col-span-1 border-none shadow-sm bg-white dark:bg-gray-900 hover:shadow-md transition-all duration-200 text-center py-4">
@@ -353,6 +488,69 @@ export function Dashboard({ lancamentos, categorias, vehicles, refetch, userId }
               className="w-full bg-[#F59E0B] hover:bg-[#D97706] text-white"
             >
               {quickLoading ? 'Salvando...' : 'Confirmar Abastecimento'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={performModalOpen}
+        onClose={() => setPerformModalOpen(false)}
+        title="Realizar Manutenção"
+        className="max-w-md"
+      >
+        <form onSubmit={handleConfirmPerform} className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Veículo e Serviço</label>
+            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300">
+              {performVehicle?.name} - {performManutencao?.tipo}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Data da Manutenção *</label>
+            <Input
+              type="date"
+              value={performDate}
+              onChange={(e) => setPerformDate(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">KM Atual *</label>
+            <Input
+              type="number"
+              inputMode="numeric"
+              value={performKm}
+              onChange={(e) => setPerformKm(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Valor Gasto (R$) *</label>
+            <Input
+              type="text"
+              inputMode="decimal"
+              placeholder="R$ 0,00"
+              value={performValueStr}
+              onChange={(e) => setPerformValueStr(formatCurrencyInput(e.target.value))}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Observação</label>
+            <Input
+              type="text"
+              placeholder="Ex: Troca de óleo Motul e filtro"
+              value={performObs}
+              onChange={(e) => setPerformObs(e.target.value)}
+            />
+          </div>
+          <div className="flex justify-end space-x-3 pt-4">
+            <Button type="button" variant="outline" onClick={() => setPerformModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={performLoading} className="bg-[#059568] hover:bg-[#047857] text-white">
+              {performLoading ? 'Salvando...' : 'Confirmar e Lançar'}
             </Button>
           </div>
         </form>

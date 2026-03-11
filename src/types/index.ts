@@ -5,6 +5,7 @@ export interface Categoria {
   user_id: string;
   nome: string;
   tipo: TipoLancamento;
+  is_system_default?: boolean;
   created_at: string;
 }
 
@@ -23,6 +24,17 @@ export interface Vehicle {
   contract_km_limit?: number;
   profit_goal?: number;
   maintenance_reserve?: number;
+  created_at: string;
+}
+
+export interface Manutencao {
+  id: string;
+  user_id: string;
+  vehicle_id: string;
+  tipo: string;
+  intervalo_km: number;
+  ultimo_km_realizado: number;
+  aviso_km_antes: number;
   created_at: string;
 }
 

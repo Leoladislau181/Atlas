@@ -105,7 +105,7 @@ export default function App() {
 }
 
 function MainApp({ user, activeTab, setActiveTab }: { user: User; activeTab: string; setActiveTab: (tab: string) => void }) {
-  const { categorias, lancamentos, vehicles, loading, refetch } = useFinanceData();
+  const { categorias, lancamentos, vehicles, manutencoes, loading, refetch } = useFinanceData();
   const [isNewLancamentoOpen, setIsNewLancamentoOpen] = useState(false);
   const [forceOpenProfile, setForceOpenProfile] = useState(false);
 
@@ -140,6 +140,7 @@ function MainApp({ user, activeTab, setActiveTab }: { user: User; activeTab: str
           lancamentos={lancamentos} 
           categorias={categorias} 
           vehicles={vehicles} 
+          manutencoes={manutencoes}
           refetch={refetch}
           userId={user.id}
         />
@@ -160,6 +161,7 @@ function MainApp({ user, activeTab, setActiveTab }: { user: User; activeTab: str
         <Veiculos
           vehicles={vehicles}
           lancamentos={lancamentos}
+          manutencoes={manutencoes}
           refetch={refetch}
           userId={user.id}
         />
