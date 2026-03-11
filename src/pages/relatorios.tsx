@@ -4,18 +4,21 @@ import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { formatCurrency, parseLocalDate } from '@/lib/utils';
-import { Lancamento, Vehicle } from '@/types';
+import { Lancamento, Vehicle, User } from '@/types';
 import { format, isWithinInterval, startOfMonth, endOfMonth, subMonths, eachMonthOfInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { Filter, TrendingUp, TrendingDown, DollarSign, Wallet, ChevronDown, ChevronUp } from 'lucide-react';
+import { Filter, TrendingUp, TrendingDown, DollarSign, Wallet, ChevronDown, ChevronUp, FileText, Download } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface RelatoriosProps {
   lancamentos: Lancamento[];
   vehicles: Vehicle[];
+  user: User;
 }
 
-export function Relatorios({ lancamentos, vehicles }: RelatoriosProps) {
+export function Relatorios({ lancamentos, vehicles, user }: RelatoriosProps) {
   const [filterType, setFilterType] = useState<'month' | 'custom'>('month');
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
@@ -137,6 +140,85 @@ export function Relatorios({ lancamentos, vehicles }: RelatoriosProps) {
     return data;
   }, [lancamentos, chartMonthsFilter, selectedVehicleId]);
 
+  const exportToPDF = async () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    
+    // Header
+    doc.setFillColor(245, 158, 11); // #F59E0B
+    doc.rect(0, 0, pageWidth, 40, 'F');
+    
+    // User Photo as Logo in PDF
+    if (user.foto_url) {
+      try {
+        const img = new Image();
+        img.src = user.foto_url;
+        img.crossOrigin = "Anonymous";
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+        });
+        doc.addImage(img, 'JPEG', 15, 5, 30, 30);
+      } catch (e) {
+        console.error("Error adding image to PDF", e);
+      }
+    }
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.text('Atlas Financeiro', 55, 20);
+    doc.setFontSize(12);
+    doc.text(`Relatório de: ${user.nome || user.email}`, 55, 30);
+    
+    doc.setTextColor(100, 100, 100);
+    doc.setFontSize(10);
+    const periodText = filterType === 'month' 
+      ? `Período: ${format(parseLocalDate(selectedMonth + '-01'), 'MMMM yyyy', { locale: ptBR })}`
+      : `Período: ${format(parseLocalDate(startDate), 'dd/MM/yyyy')} até ${format(parseLocalDate(endDate), 'dd/MM/yyyy')}`;
+    doc.text(periodText, 15, 50);
+    
+    if (selectedVehicleId !== 'all') {
+      const vehicle = vehicles.find(v => v.id === selectedVehicleId);
+      doc.text(`Veículo: ${vehicle?.name} (${vehicle?.plate})`, 15, 55);
+    }
+
+    // Stats Table
+    autoTable(doc, {
+      startY: 65,
+      head: [['Resumo Financeiro', 'Valor']],
+      body: [
+        ['Total Receitas', formatCurrency(stats.receitas)],
+        ['Total Despesas', formatCurrency(stats.despesas)],
+        ['Lucro Líquido', formatCurrency(stats.lucroLiquido)],
+        ['Saldo Acumulado', formatCurrency(stats.saldoAcumulado)],
+      ],
+      theme: 'striped',
+      headStyles: { fillColor: [245, 158, 11] },
+    });
+
+    // Transactions Table
+    const tableData = filteredLancamentos.map(l => [
+      format(parseLocalDate(l.data), 'dd/MM/yyyy'),
+      l.descricao,
+      l.categorias?.nome || '-',
+      l.tipo.toUpperCase(),
+      formatCurrency(Number(l.valor))
+    ]);
+
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 15,
+      head: [['Data', 'Descrição', 'Categoria', 'Tipo', 'Valor']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [55, 65, 81] },
+      columnStyles: {
+        4: { halign: 'right' }
+      }
+    });
+
+    doc.save(`relatorio-financeiro-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+  };
+
   return (
     <div className="space-y-6">
       <Card className="border-none shadow-sm bg-white dark:bg-gray-900 overflow-hidden">
@@ -211,6 +293,16 @@ export function Relatorios({ lancamentos, vehicles }: RelatoriosProps) {
                     </option>
                   ))}
                 </Select>
+              </div>
+
+              <div className="sm:col-span-2 lg:col-span-1">
+                <Button 
+                  onClick={exportToPDF}
+                  className="w-full bg-[#F59E0B] hover:bg-[#D97706] text-white flex items-center justify-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Exportar PDF
+                </Button>
               </div>
             </div>
           </CardContent>

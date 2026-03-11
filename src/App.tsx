@@ -51,6 +51,17 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    // Update favicon if user has a profile photo
+    if (user?.foto_url) {
+      const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement || document.createElement('link');
+      link.type = 'image/x-icon';
+      link.rel = 'icon';
+      link.href = user.foto_url;
+      document.getElementsByTagName('head')[0].appendChild(link);
+    }
+  }, [user?.foto_url]);
+
   if (!session || !user) {
     return <Auth />;
   }
@@ -93,7 +104,7 @@ function MainApp({ user, activeTab, setActiveTab }: { user: User; activeTab: str
           userId={user.id}
         />
       )}
-      {activeTab === 'relatorios' && <Relatorios lancamentos={lancamentos} vehicles={vehicles} />}
+      {activeTab === 'relatorios' && <Relatorios lancamentos={lancamentos} vehicles={vehicles} user={user} />}
       {activeTab === 'veiculos' && (
         <Veiculos
           vehicles={vehicles}

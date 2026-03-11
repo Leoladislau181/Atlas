@@ -29,12 +29,21 @@ export function Layout({ children, activeTab, setActiveTab, user }: LayoutProps)
       <header className="sticky top-0 z-40 w-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 shadow-sm">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            <img 
-              src="/logo.svg" 
-              alt="Atlas Logo" 
-              className="h-9 w-9 rounded-xl shadow-sm"
-              referrerPolicy="no-referrer"
-            />
+            {user?.foto_url ? (
+              <img 
+                src={user.foto_url} 
+                alt="User Logo" 
+                className="h-9 w-9 rounded-xl shadow-sm object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <img 
+                src="/logo.svg" 
+                alt="Atlas Logo" 
+                className="h-9 w-9 rounded-xl shadow-sm"
+                referrerPolicy="no-referrer"
+              />
+            )}
             <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
               Atlas Financeiro
             </span>
