@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User } from '@/types';
+import { isPremium } from '@/lib/utils';
 import { Auth } from '@/pages/auth';
 import { Layout } from '@/components/layout';
 import { Dashboard } from '@/pages/dashboard';
@@ -40,7 +41,10 @@ export default function App() {
             email: session.user.email || '',
             nome: session.user.user_metadata?.nome || '',
             telefone: session.user.user_metadata?.telefone || '',
-            foto_url: session.user.user_metadata?.foto_url || ''
+            foto_url: session.user.user_metadata?.foto_url || '',
+            referral_code: session.user.user_metadata?.referral_code || '',
+            referred_by: session.user.user_metadata?.referred_by || '',
+            premium_until: session.user.user_metadata?.premium_until || ''
           });
         }
       } catch (err) {
@@ -64,7 +68,10 @@ export default function App() {
           email: session.user.email || '',
           nome: session.user.user_metadata?.nome || '',
           telefone: session.user.user_metadata?.telefone || '',
-          foto_url: session.user.user_metadata?.foto_url || ''
+          foto_url: session.user.user_metadata?.foto_url || '',
+          referral_code: session.user.user_metadata?.referral_code || '',
+          referred_by: session.user.user_metadata?.referred_by || '',
+          premium_until: session.user.user_metadata?.premium_until || ''
         });
       } else {
         setUser(null);
@@ -118,6 +125,19 @@ function MainApp({ user, activeTab, setActiveTab }: { user: User; activeTab: str
   }
 
   const handleNewLancamento = () => {
+    if (!isPremium(user)) {
+      const currentMonth = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
+      const transactionsThisMonth = lancamentos.filter(l => {
+        const d = new Date(l.data);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      });
+
+      if (transactionsThisMonth.length >= 50) {
+        alert('Usuários do plano gratuito têm um limite de 50 lançamentos por mês. Faça o upgrade para lançamentos ilimitados.');
+        return;
+      }
+    }
     setActiveTab('lancamentos');
     setIsNewLancamentoOpen(true);
   };
@@ -142,7 +162,7 @@ function MainApp({ user, activeTab, setActiveTab }: { user: User; activeTab: str
           vehicles={vehicles} 
           manutencoes={manutencoes}
           refetch={refetch}
-          userId={user.id}
+          user={user}
         />
       )}
       {activeTab === 'lancamentos' && (
@@ -151,7 +171,7 @@ function MainApp({ user, activeTab, setActiveTab }: { user: User; activeTab: str
           lancamentos={lancamentos}
           vehicles={vehicles}
           refetch={refetch}
-          userId={user.id}
+          user={user}
           forceOpenForm={isNewLancamentoOpen}
           onFormClose={() => setIsNewLancamentoOpen(false)}
         />
@@ -163,7 +183,7 @@ function MainApp({ user, activeTab, setActiveTab }: { user: User; activeTab: str
           lancamentos={lancamentos}
           manutencoes={manutencoes}
           refetch={refetch}
-          userId={user.id}
+          user={user}
         />
       )}
       {activeTab === 'configuracoes' && (

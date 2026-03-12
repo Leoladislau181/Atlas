@@ -2,10 +2,11 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatCurrency, formatCurrencyInput, parseCurrency, parseLocalDate } from '@/lib/utils';
-import { Lancamento, Categoria, Vehicle, Manutencao } from '@/types';
+import { Lancamento, Categoria, Vehicle, Manutencao, User } from '@/types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { startOfMonth, endOfMonth, isWithinInterval, format, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { isPremium } from '@/lib/utils';
 
 import { ArrowUpCircle, ArrowDownCircle, DollarSign, Wallet, Filter, Zap, Fuel, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
@@ -19,10 +20,10 @@ interface DashboardProps {
   vehicles: Vehicle[];
   manutencoes: Manutencao[];
   refetch: () => void;
-  userId: string;
+  user: User;
 }
 
-export function Dashboard({ lancamentos, categorias, vehicles, manutencoes, refetch, userId }: DashboardProps) {
+export function Dashboard({ lancamentos, categorias, vehicles, manutencoes, refetch, user }: DashboardProps) {
   const now = new Date();
   const start = startOfMonth(now);
   const end = endOfMonth(now);
@@ -90,6 +91,20 @@ export function Dashboard({ lancamentos, categorias, vehicles, manutencoes, refe
     e.preventDefault();
     if (!quickValueStr || !quickKM) return;
 
+    if (!isPremium(user)) {
+      const currentMonth = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
+      const transactionsThisMonth = lancamentos.filter(l => {
+        const d = new Date(l.data);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      });
+
+      if (transactionsThisMonth.length >= 50) {
+        alert('Usuários do plano gratuito têm um limite de 50 lançamentos por mês. Faça o upgrade para lançamentos ilimitados.');
+        return;
+      }
+    }
+
     const valorNum = parseCurrency(quickValueStr);
     if (valorNum <= 0) {
       alert('O valor deve ser maior que zero.');
@@ -120,7 +135,7 @@ export function Dashboard({ lancamentos, categorias, vehicles, manutencoes, refe
       const { error } = await supabase
         .from('lancamentos')
         .insert([{
-          user_id: userId,
+          user_id: user.id,
           tipo: 'despesa',
           categoria_id: fuelCategory.id,
           vehicle_id: selectedVehicle.id,
@@ -242,7 +257,7 @@ export function Dashboard({ lancamentos, categorias, vehicles, manutencoes, refe
       const { error: lancError } = await supabase
         .from('lancamentos')
         .insert([{
-          user_id: userId,
+          user_id: user.id,
           tipo: 'despesa',
           categoria_id: maintCategory.id,
           vehicle_id: performVehicle.id,

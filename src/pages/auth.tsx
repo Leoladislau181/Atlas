@@ -8,6 +8,7 @@ import { ShieldCheck } from 'lucide-react';
 export function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [referredBy, setReferredBy] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSignUp, setIsSignUp] = useState(false);
@@ -19,7 +20,15 @@ export function Auth() {
 
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { error } = await supabase.auth.signUp({ 
+          email, 
+          password,
+          options: {
+            data: {
+              referred_by: referredBy || null
+            }
+          }
+        });
         if (error) throw error;
         alert('Conta criada com sucesso! Verifique seu email ou faça login.');
         setIsSignUp(false);
@@ -118,6 +127,18 @@ export function Auth() {
                   className="h-12 bg-gray-50/50 dark:bg-gray-800/50"
                 />
               </div>
+              {isSignUp && (
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Código de Indicação (Opcional)</label>
+                  <Input
+                    type="text"
+                    placeholder="Ex: ABC123"
+                    value={referredBy}
+                    onChange={(e) => setReferredBy(e.target.value.toUpperCase())}
+                    className="h-12 bg-gray-50/50 dark:bg-gray-800/50 uppercase"
+                  />
+                </div>
+              )}
               {error && (
                 <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-sm text-red-600 dark:text-red-400 border border-red-100 dark:border-red-800">
                   {error}

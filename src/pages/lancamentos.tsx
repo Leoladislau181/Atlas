@@ -4,27 +4,28 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Modal } from '@/components/ui/modal';
-import { cn, formatCurrency, formatCurrencyInput, parseCurrency, parseLocalDate } from '@/lib/utils';
-import { Categoria, Lancamento, TipoLancamento, Vehicle } from '@/types';
+import { cn, formatCurrency, formatCurrencyInput, parseCurrency, parseLocalDate, isPremium } from '@/lib/utils';
+import { Categoria, Lancamento, TipoLancamento, Vehicle, User } from '@/types';
 import { supabase } from '@/lib/supabase';
-import { Edit2, Trash2, Car, Plus, ChevronUp, Filter, Search, ChevronLeft, ChevronRight, Calendar, Download, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { Edit2, Trash2, Car, Plus, ChevronUp, Filter, Search, ChevronLeft, ChevronRight, Calendar, Download, TrendingUp, TrendingDown, DollarSign, Camera, Loader2, Lock } from 'lucide-react';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { parseReceiptImage } from '@/services/geminiService';
 
 interface LancamentosProps {
   categorias: Categoria[];
   lancamentos: Lancamento[];
   vehicles: Vehicle[];
   refetch: () => void;
-  userId: string;
+  user: User;
   forceOpenForm?: boolean;
   onFormClose?: () => void;
 }
 
-export function Lancamentos({ categorias, lancamentos, vehicles, refetch, userId, forceOpenForm, onFormClose }: LancamentosProps) {
+export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, forceOpenForm, onFormClose }: LancamentosProps) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [tipo, setTipo] = useState<TipoLancamento>('despesa');
   const [categoriaId, setCategoriaId] = useState('');
@@ -48,6 +49,9 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, userId
   
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
+
+  const [isReadingReceipt, setIsReadingReceipt] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // History Filters
   const [filterMonth, setFilterMonth] = useState('');
@@ -88,6 +92,56 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, userId
     setValorStr(formatted);
   };
 
+  const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isPremium(user)) {
+      alert('A Leitura de Nota Fiscal com IA é uma funcionalidade exclusiva do plano Premium.');
+      return;
+    }
+
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsReadingReceipt(true);
+    try {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        try {
+          const base64String = (reader.result as string).split(',')[1];
+          const mimeType = file.type;
+          
+          const result = await parseReceiptImage(base64String, mimeType);
+          
+          setTipo('despesa');
+          
+          const fuelCategory = categorias.find(c => c.nome.toLowerCase().includes('combustível') || c.nome.toLowerCase().includes('combustivel'));
+          if (fuelCategory) {
+            setCategoriaId(fuelCategory.id);
+          }
+
+          if (result.valor) setValorStr(formatCurrency(result.valor));
+          if (result.data) setData(result.data);
+          
+          if (result.litros && result.preco_litro) {
+            setUseVehicle(true);
+            setFuelPricePerLiterStr(formatCurrency(result.preco_litro));
+          }
+
+          setObservacao('Lançamento via Leitor de Nota Fiscal');
+          setIsFormOpen(true);
+        } catch (error: any) {
+          alert('Erro ao ler a nota fiscal: ' + error.message);
+        } finally {
+          setIsReadingReceipt(false);
+          if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      setIsReadingReceipt(false);
+      alert('Erro ao processar imagem.');
+    }
+  };
+
   const isCombustivel = () => {
     const cat = categorias.find(c => c.id === categoriaId);
     return cat?.nome.toLowerCase().includes('combustível') || cat?.nome.toLowerCase().includes('combustivel');
@@ -116,6 +170,20 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, userId
       return;
     }
 
+    if (!editingId && !isPremium(user)) {
+      const currentMonth = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
+      const transactionsThisMonth = lancamentos.filter(l => {
+        const d = new Date(l.data);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      });
+
+      if (transactionsThisMonth.length >= 50) {
+        alert('Usuários do plano gratuito têm um limite de 50 lançamentos por mês. Faça o upgrade para lançamentos ilimitados.');
+        return;
+      }
+    }
+
     if (useVehicle && tipo === 'despesa') {
       const vehicle = vehicles.find(v => v.id === vehicleId);
       const odoNum = Number(odometer);
@@ -142,7 +210,7 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, userId
     setLoading(true);
     try {
       const payload: any = {
-        user_id: userId,
+        user_id: user.id,
         tipo,
         categoria_id: categoriaId,
         valor: valorNum,
@@ -412,10 +480,42 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, userId
         </div>
 
         <div className="flex items-center justify-end w-10 sm:w-auto sm:ml-4 gap-2">
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            ref={fileInputRef}
+            onChange={handleReceiptUpload}
+            className="hidden"
+          />
+          <Button
+            variant="outline"
+            className="hidden sm:flex items-center gap-2 bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400 dark:border-indigo-800/50"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isReadingReceipt}
+          >
+            {isReadingReceipt ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+            Ler Nota Fiscal
+          </Button>
           <Button
             variant="outline"
             size="icon"
-            onClick={() => setIsExportModalOpen(true)}
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isReadingReceipt}
+            className="sm:hidden flex h-9 w-9 rounded-xl bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400 dark:border-indigo-800/50"
+          >
+            {isReadingReceipt ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => {
+              if (!isPremium(user)) {
+                alert('A exportação de relatórios é uma funcionalidade exclusiva do plano Premium.');
+                return;
+              }
+              setIsExportModalOpen(true);
+            }}
             title="Exportar"
             className="flex h-9 w-9 sm:h-11 sm:w-11 rounded-xl text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
           >
@@ -551,6 +651,23 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, userId
           </CardContent>
         </Card>
       )}
+
+      <Modal
+        isOpen={isReadingReceipt}
+        onClose={() => {}}
+        title="Processando Recibo"
+        className="max-w-sm"
+      >
+        <div className="flex flex-col items-center justify-center py-8 space-y-4">
+          <Loader2 className="h-12 w-12 text-indigo-500 animate-spin" />
+          <p className="text-center text-gray-600 dark:text-gray-300 font-medium">
+            A Inteligência Artificial está lendo seu recibo...
+          </p>
+          <p className="text-center text-xs text-gray-400 dark:text-gray-500">
+            Isso leva apenas alguns segundos.
+          </p>
+        </div>
+      </Modal>
 
       <Modal
         isOpen={isFormOpen}

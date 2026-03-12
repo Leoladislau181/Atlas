@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { formatCurrency, parseLocalDate } from '@/lib/utils';
+import { formatCurrency, parseLocalDate, isPremium } from '@/lib/utils';
 import { Lancamento, Vehicle, User } from '@/types';
 import { format, isWithinInterval, startOfMonth, endOfMonth, subMonths, eachMonthOfInterval, differenceInDays, addDays, isSameDay, startOfYear, endOfYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -737,7 +737,13 @@ export function Relatorios({ lancamentos, vehicles, user }: RelatoriosProps) {
 
               <div className="sm:col-span-2 lg:col-span-1">
                 <Button 
-                  onClick={() => setIsExportModalOpen(true)}
+                  onClick={() => {
+                    if (!isPremium(user)) {
+                      alert('A exportação de relatórios é uma funcionalidade exclusiva do plano Premium.');
+                      return;
+                    }
+                    setIsExportModalOpen(true);
+                  }}
                   className="w-full bg-[#F59E0B] hover:bg-[#D97706] text-white flex items-center justify-center gap-2"
                 >
                   <Download className="h-4 w-4" />

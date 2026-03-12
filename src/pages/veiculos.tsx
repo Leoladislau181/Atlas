@@ -4,20 +4,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Modal } from '@/components/ui/modal';
-import { formatCurrency, formatCurrencyInput, parseCurrency } from '@/lib/utils';
-import { Lancamento, Vehicle, Manutencao } from '@/types';
+import { formatCurrency, formatCurrencyInput, parseCurrency, isPremium } from '@/lib/utils';
+import { Lancamento, Vehicle, Manutencao, User } from '@/types';
 import { supabase } from '@/lib/supabase';
-import { Edit2, Trash2, Car, RefreshCw, Plus, ChevronDown, ChevronUp, Wrench } from 'lucide-react';
+import { Edit2, Trash2, Car, RefreshCw, Plus, ChevronDown, ChevronUp, Wrench, Lock } from 'lucide-react';
 
 interface VeiculosProps {
   vehicles: Vehicle[];
   lancamentos: Lancamento[];
   manutencoes: Manutencao[];
   refetch: () => void;
-  userId: string;
+  user: User;
 }
 
-export function Veiculos({ vehicles, lancamentos, manutencoes, refetch, userId }: VeiculosProps) {
+export function Veiculos({ vehicles, lancamentos, manutencoes, refetch, user }: VeiculosProps) {
   const [name, setName] = useState('');
   const [plate, setPlate] = useState('');
   const [type, setType] = useState<'own' | 'rented'>('own');
@@ -85,10 +85,15 @@ export function Veiculos({ vehicles, lancamentos, manutencoes, refetch, userId }
       return;
     }
 
+    if (!editingId && !isPremium(user) && vehicles.length >= 1) {
+      alert('Usuários do plano gratuito podem cadastrar apenas 1 veículo. Faça o upgrade para cadastrar mais veículos.');
+      return;
+    }
+
     setLoading(true);
     try {
       const payload: any = {
-        user_id: userId,
+        user_id: user.id,
         name,
         plate,
         type,
@@ -118,8 +123,23 @@ export function Veiculos({ vehicles, lancamentos, manutencoes, refetch, userId }
         const { error } = await supabase.from('vehicles').update(payload).eq('id', editingId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('vehicles').insert([payload]);
+        const { data: newVehicle, error } = await supabase.from('vehicles').insert([payload]).select();
         if (error) throw error;
+
+        if (type === 'rented') {
+          const { data: catData } = await supabase.from('categorias').select('id').eq('nome', 'Aluguel').single();
+          if (catData) {
+            await supabase.from('lancamentos').insert([{
+              user_id: user.id,
+              tipo: 'despesa',
+              categoria_id: catData.id,
+              vehicle_id: newVehicle[0].id,
+              valor: parseCurrency(contractValueStr),
+              data: contractStartDate || new Date().toISOString().split('T')[0],
+              observacao: `Pagamento inicial do contrato - ${name}`
+            }]);
+          }
+        }
       }
 
       resetForm();
@@ -224,6 +244,19 @@ export function Veiculos({ vehicles, lancamentos, manutencoes, refetch, userId }
       const { error } = await supabase.from('vehicles').update(payload).eq('id', renewingVehicle.id);
       if (error) throw error;
 
+      const { data: catData } = await supabase.from('categorias').select('id').eq('nome', 'Aluguel').single();
+      if (catData) {
+        await supabase.from('lancamentos').insert([{
+          user_id: user.id,
+          tipo: 'despesa',
+          categoria_id: catData.id,
+          vehicle_id: renewingVehicle.id,
+          valor: parseCurrency(renewContractValueStr),
+          data: renewStartDate || new Date().toISOString().split('T')[0],
+          observacao: `Pagamento de renovação de contrato - ${renewingVehicle.name}`
+        }]);
+      }
+
       setRenewModalOpen(false);
       setRenewingVehicle(null);
       refetch();
@@ -259,10 +292,15 @@ export function Veiculos({ vehicles, lancamentos, manutencoes, refetch, userId }
       return;
     }
 
+    if (!isPremium(user)) {
+      alert('O plano de manutenção é uma funcionalidade exclusiva do plano Premium.');
+      return;
+    }
+
     setLoading(true);
     try {
       const payload = {
-        user_id: userId,
+        user_id: user.id,
         vehicle_id: maintenanceVehicle.id,
         tipo: maintenanceTipo,
         intervalo_km: Number(maintenanceIntervaloKm),
@@ -378,7 +416,13 @@ export function Veiculos({ vehicles, lancamentos, manutencoes, refetch, userId }
       <Card className="overflow-hidden border-none shadow-sm bg-white dark:bg-gray-900">
         <div 
           className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-          onClick={() => setIsFormOpen(!isFormOpen)}
+          onClick={() => {
+            if (!isFormOpen && !editingId && !isPremium(user) && vehicles.length >= 1) {
+              alert('Usuários do plano gratuito podem cadastrar apenas 1 veículo. Faça o upgrade para cadastrar mais veículos.');
+              return;
+            }
+            setIsFormOpen(!isFormOpen);
+          }}
         >
           <div className="flex items-center gap-3">
             <div className="p-2 bg-[#F59E0B]/10 rounded-lg">

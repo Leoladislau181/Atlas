@@ -6,7 +6,7 @@ import { Select } from '@/components/ui/select';
 import { Modal } from '@/components/ui/modal';
 import { Categoria, TipoLancamento, User } from '@/types';
 import { supabase } from '@/lib/supabase';
-import { Edit2, Trash2, User as UserIcon, Settings, Shield, Tag, ChevronDown, ChevronUp, Moon, Sun, Camera, BarChart2 } from 'lucide-react';
+import { Edit2, Trash2, User as UserIcon, Settings, Shield, Tag, ChevronDown, ChevronUp, Moon, Sun, Camera, BarChart2, Gift, Copy } from 'lucide-react';
 import { useTheme } from '@/components/theme-provider';
 import { ProfilePhotoUpload } from '@/components/profile-photo-upload';
 
@@ -39,6 +39,9 @@ export function Configuracoes({ categorias, user, refetch, onNavigateToRelatorio
   const [profileTelefone, setProfileTelefone] = useState(user.telefone || '');
   const [profileLoading, setProfileLoading] = useState(false);
   const [isCategoryFormOpen, setIsCategoryFormOpen] = useState(false);
+  const [isReferralOpen, setIsReferralOpen] = useState(false);
+  const [referralCode, setReferralCode] = useState(user.referral_code || '');
+  const [referralLoading, setReferralLoading] = useState(false);
 
   React.useEffect(() => {
     setProfileNome(user.nome || '');
@@ -172,6 +175,28 @@ export function Configuracoes({ categorias, user, refetch, onNavigateToRelatorio
     } finally {
       setProfileLoading(false);
     }
+  };
+
+  const generateReferralCode = async () => {
+    setReferralLoading(true);
+    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: { referral_code: code }
+      });
+      if (error) throw error;
+      setReferralCode(code);
+      alert('Código gerado com sucesso!');
+    } catch (error: any) {
+      alert(error.message || 'Erro ao gerar código.');
+    } finally {
+      setReferralLoading(false);
+    }
+  };
+
+  const copyReferralCode = () => {
+    navigator.clipboard.writeText(referralCode);
+    alert('Código copiado para a área de transferência!');
   };
 
   const receitas = categorias.filter((c) => c.tipo === 'receita');
@@ -312,6 +337,61 @@ export function Configuracoes({ categorias, user, refetch, onNavigateToRelatorio
                     <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
                   </div>
                 </div>
+              </div>
+            </CardContent>
+          )}
+        </Card>
+
+        <Card className="border-none shadow-sm bg-white dark:bg-gray-900 overflow-hidden">
+          <div 
+            className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+            onClick={() => setIsReferralOpen(!isReferralOpen)}
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
+                <Gift className="h-5 w-5 text-emerald-500 dark:text-emerald-400" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 dark:text-gray-100">Indique e Ganhe Premium</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Ganhe 1 mês grátis por cada amigo que se cadastrar</p>
+              </div>
+            </div>
+            <Button variant="ghost" size="sm" className="text-gray-400 dark:text-gray-500">
+              {isReferralOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+            </Button>
+          </div>
+
+          {isReferralOpen && (
+            <CardContent className="pt-6 border-t border-gray-100 dark:border-gray-800 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="space-y-4">
+                <div className="bg-emerald-50 dark:bg-emerald-900/10 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
+                  <h4 className="font-semibold text-emerald-800 dark:text-emerald-300 mb-2">Como funciona?</h4>
+                  <ul className="text-sm text-emerald-700 dark:text-emerald-400 space-y-1 list-disc list-inside">
+                    <li>Compartilhe seu código com amigos.</li>
+                    <li>Eles ganham 15 dias de Premium ao se cadastrar.</li>
+                    <li>Você ganha 1 mês de Premium automaticamente!</li>
+                  </ul>
+                </div>
+
+                {referralCode ? (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Seu Código de Indicação</label>
+                    <div className="flex gap-2">
+                      <Input value={referralCode} readOnly className="font-mono text-lg tracking-wider text-center bg-gray-50 dark:bg-gray-800/50" />
+                      <Button onClick={copyReferralCode} variant="outline" className="shrink-0">
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copiar
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Você ainda não tem um código de indicação.</p>
+                    <Button onClick={generateReferralCode} disabled={referralLoading} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                      {referralLoading ? 'Gerando...' : 'Gerar Meu Código'}
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardContent>
           )}

@@ -61,4 +61,7 @@ export interface User {
   nome?: string;
   telefone?: string;
   foto_url?: string;
+  referral_code?: string;
+  referred_by?: string;
+  premium_until?: string;
 }

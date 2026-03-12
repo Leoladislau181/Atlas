@@ -25,9 +25,10 @@ export function useFinanceData() {
       // Check and create default categories if they don't exist
       if (userId && catData) {
         const defaultCategories = [
-          { nome: 'Manutenção', tipo: 'despesa', is_system_default: true },
-          { nome: 'Combustível', tipo: 'despesa', is_system_default: true },
-          { nome: 'Particular', tipo: 'receita', is_system_default: true }
+          { nome: 'Manutenção', tipo: 'despesa', is_system_default: true, is_deductible: true },
+          { nome: 'Combustível', tipo: 'despesa', is_system_default: true, is_deductible: true },
+          { nome: 'Particular', tipo: 'receita', is_system_default: true, is_deductible: false },
+          { nome: 'Aluguel', tipo: 'despesa', is_system_default: true, is_deductible: true }
         ];
 
         const missingDefaults = defaultCategories.filter(
