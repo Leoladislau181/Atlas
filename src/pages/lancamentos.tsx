@@ -62,6 +62,7 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, 
   const [filterVehicleId, setFilterVehicleId] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (forceOpenForm) {
@@ -939,62 +940,67 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, 
               </div>
             ) : (
               visibleLancamentos.map((l) => (
-                <div key={l.id} className="p-4 active:bg-gray-50 dark:active:bg-gray-800/50 transition-colors">
-                  <div className="flex items-start justify-between mb-2">
+                <div 
+                  key={l.id} 
+                  className="p-4 active:bg-gray-50 dark:active:bg-gray-800/50 transition-colors cursor-pointer"
+                  onClick={() => setExpandedId(expandedId === l.id ? null : l.id)}
+                >
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className={cn(
-                        "p-2.5 rounded-xl",
-                        l.tipo === 'receita' ? "bg-green-50 dark:bg-green-900/20" : "bg-red-50 dark:bg-red-900/20"
-                      )}>
-                        {l.tipo === 'receita' ? (
-                          <ChevronUp className="h-5 w-5 text-[#059568] dark:text-[#10B981]" />
-                        ) : (
-                          <ChevronUp className="h-5 w-5 text-[#EF4444] dark:text-[#F87171] rotate-180" />
-                        )}
-                      </div>
+                        "w-2 h-2 rounded-full shrink-0",
+                        l.tipo === 'receita' ? "bg-[#10B981]" : "bg-[#EF4444]"
+                      )} />
                       <div>
                         <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{l.categorias?.nome || 'N/A'}</p>
-                        <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          {format(parseLocalDate(l.data), 'dd MMM yyyy', { locale: ptBR })}
-                        </p>
+                        <div className="flex items-center gap-2 text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mt-0.5">
+                          <span>{format(parseLocalDate(l.data), 'dd MMM yyyy', { locale: ptBR })}</span>
+                          {l.vehicles && (
+                            <>
+                              <span>•</span>
+                              <span className="flex items-center gap-1">
+                                <Car className="h-2.5 w-2.5" />
+                                {l.vehicles.name}
+                              </span>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right shrink-0 ml-2">
                       <p className={cn(
                         "text-sm font-bold",
                         l.tipo === 'receita' ? "text-[#059568] dark:text-[#10B981]" : "text-[#EF4444] dark:text-[#F87171]"
                       )}>
                         {l.tipo === 'receita' ? '+' : '-'}{formatCurrency(l.valor)}
                       </p>
-                      {l.vehicles && (
-                        <p className="text-[10px] text-gray-400 dark:text-gray-500 flex items-center justify-end gap-1 mt-0.5">
-                          <Car className="h-2.5 w-2.5" />
-                          {l.vehicles.name}
-                        </p>
-                      )}
                     </div>
                   </div>
                   
-                  {l.observacao && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 pl-12 italic">"{l.observacao}"</p>
-                  )}
+                  {expandedId === l.id && (
+                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 animate-in slide-in-from-top-2 duration-200">
+                      {l.observacao && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 italic">"{l.observacao}"</p>
+                      )}
 
-                  <div className="flex items-center justify-end gap-2 pl-12">
-                    <button
-                      onClick={() => handleEdit(l)}
-                      className="flex items-center gap-1.5 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                    >
-                      <Edit2 className="h-3.5 w-3.5" />
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => confirmDelete(l.id)}
-                      className="flex items-center gap-1.5 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Excluir
-                    </button>
-                  </div>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleEdit(l); }}
+                          className="flex items-center gap-1.5 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                          Editar
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); confirmDelete(l.id); }}
+                          className="flex items-center gap-1.5 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Excluir
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))
             )}

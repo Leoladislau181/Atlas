@@ -206,6 +206,7 @@ function MainApp({ user, activeTab, setActiveTab }: { user: User; activeTab: str
           refetch={refetch} 
           onNavigateToRelatorios={() => setActiveTab('relatorios')}
           onNavigateToPremium={() => setActiveTab('premium')}
+          onNavigateToVeiculos={() => setActiveTab('veiculos')}
           forceOpenProfile={forceOpenProfile}
           onProfileOpened={() => setForceOpenProfile(false)}
         />

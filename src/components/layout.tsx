@@ -1,8 +1,9 @@
-import React from 'react';
-import { LogOut, Home, List, BarChart2, Car, Settings, User as UserIcon, Plus, Star } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { LogOut, Home, List, BarChart2, Car, Settings, User as UserIcon, Plus, Star, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { User } from '@/types';
+import { isPremium } from '@/lib/utils';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -14,12 +15,19 @@ interface LayoutProps {
 }
 
 export function Layout({ children, activeTab, setActiveTab, onNewLancamento, onProfileClick, user }: LayoutProps) {
+  const userIsPremium = user ? isPremium(user) : false;
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [activeTab]);
+
   const tabs = [
     { id: 'inicio', label: 'Início', icon: Home },
     { id: 'lancamentos', label: 'Lançamentos', icon: List },
-    { id: 'veiculos', label: 'Veículos', icon: Car },
-    { id: 'premium', label: 'Premium', icon: Star },
-    { id: 'configuracoes', label: 'Configurações', icon: Settings },
+    userIsPremium 
+      ? { id: 'veiculos', label: 'Veículos', icon: Car }
+      : { id: 'premium', label: 'Premium', icon: Star },
+    { id: 'configuracoes', label: 'Mais', icon: Menu },
   ];
 
   const handleLogout = async () => {
