@@ -23,9 +23,11 @@ interface LancamentosProps {
   user: User;
   forceOpenForm?: boolean;
   onFormClose?: () => void;
+  forceOpenReceiptReader?: boolean;
+  onReceiptReaderClose?: () => void;
 }
 
-export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, forceOpenForm, onFormClose }: LancamentosProps) {
+export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, forceOpenForm, onFormClose, forceOpenReceiptReader, onReceiptReaderClose }: LancamentosProps) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [tipo, setTipo] = useState<TipoLancamento>('despesa');
   const [categoriaId, setCategoriaId] = useState('');
@@ -66,6 +68,28 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, 
       setIsFormOpen(true);
     }
   }, [forceOpenForm]);
+
+  useEffect(() => {
+    if (forceOpenReceiptReader) {
+      if (!isPremium(user)) {
+        alert('A Leitura de Nota Fiscal com IA é uma funcionalidade exclusiva do plano Premium.');
+        if (onReceiptReaderClose) onReceiptReaderClose();
+        return;
+      }
+      
+      setIsFormOpen(true);
+      
+      // Small timeout to ensure the form is rendered and ref is available
+      setTimeout(() => {
+        if (fileInputRef.current) {
+          fileInputRef.current.click();
+        }
+        if (onReceiptReaderClose) {
+          onReceiptReaderClose();
+        }
+      }, 100);
+    }
+  }, [forceOpenReceiptReader, onReceiptReaderClose, user]);
 
   useEffect(() => {
     if (!isFormOpen && onFormClose) {

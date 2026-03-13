@@ -8,7 +8,7 @@ import { startOfMonth, endOfMonth, isWithinInterval, format, subMonths } from 'd
 import { ptBR } from 'date-fns/locale';
 import { isPremium } from '@/lib/utils';
 
-import { ArrowUpCircle, ArrowDownCircle, DollarSign, Wallet, Filter, Zap, Fuel, AlertTriangle, CheckCircle } from 'lucide-react';
+import { ArrowUpCircle, ArrowDownCircle, DollarSign, Wallet, Filter, Zap, Fuel, AlertTriangle, CheckCircle, Camera } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -21,9 +21,10 @@ interface DashboardProps {
   manutencoes: Manutencao[];
   refetch: () => void;
   user: User;
+  onReadReceipt?: () => void;
 }
 
-export function Dashboard({ lancamentos, categorias, vehicles, manutencoes, refetch, user }: DashboardProps) {
+export function Dashboard({ lancamentos, categorias, vehicles, manutencoes, refetch, user, onReadReceipt }: DashboardProps) {
   const now = new Date();
   const start = startOfMonth(now);
   const end = endOfMonth(now);
@@ -144,7 +145,7 @@ export function Dashboard({ lancamentos, categorias, vehicles, manutencoes, refe
           odometer: Number(quickKM),
           fuel_price_per_liter: pricePerLiter > 0 ? pricePerLiter : null,
           fuel_liters: fuelLiters,
-          observacao: 'Lançamento Rápido (Abastecimento)'
+          observacao: 'Abastecimento'
         }]);
 
       if (error) throw error;
@@ -282,14 +283,25 @@ export function Dashboard({ lancamentos, categorias, vehicles, manutencoes, refe
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Resumo</h2>
-        <Button 
-          onClick={() => setQuickEntryOpen(true)}
-          className="bg-[#F59E0B] hover:bg-[#D97706] text-white shadow-sm gap-2"
-        >
-          <Zap className="h-4 w-4" />
-          <span className="hidden sm:inline">Lançamento Rápido</span>
-          <span className="sm:hidden">Rápido</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            onClick={onReadReceipt}
+            variant="outline"
+            className="bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400 dark:border-indigo-800/50 shadow-sm gap-2"
+          >
+            <Camera className="h-4 w-4" />
+            <span className="hidden sm:inline">Ler Nota</span>
+            <span className="sm:hidden">Nota</span>
+          </Button>
+          <Button 
+            onClick={() => setQuickEntryOpen(true)}
+            className="bg-[#F59E0B] hover:bg-[#D97706] text-white shadow-sm gap-2"
+          >
+            <Fuel className="h-4 w-4" />
+            <span className="hidden sm:inline">Abastecer</span>
+            <span className="sm:hidden">Abastecer</span>
+          </Button>
+        </div>
       </div>
 
       {maintenanceAlerts.length > 0 && (
@@ -438,7 +450,7 @@ export function Dashboard({ lancamentos, categorias, vehicles, manutencoes, refe
       <Modal
         isOpen={quickEntryOpen}
         onClose={() => setQuickEntryOpen(false)}
-        title="Abastecimento Rápido"
+        title="Registrar Abastecimento"
         className="max-w-lg"
       >
         <form onSubmit={handleQuickEntry} className="space-y-4">

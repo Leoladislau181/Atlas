@@ -115,6 +115,7 @@ function MainApp({ user, activeTab, setActiveTab }: { user: User; activeTab: str
   const { categorias, lancamentos, vehicles, manutencoes, loading, refetch } = useFinanceData();
   const [isNewLancamentoOpen, setIsNewLancamentoOpen] = useState(false);
   const [forceOpenProfile, setForceOpenProfile] = useState(false);
+  const [forceOpenReceiptReader, setForceOpenReceiptReader] = useState(false);
 
   if (loading) {
     return (
@@ -147,6 +148,11 @@ function MainApp({ user, activeTab, setActiveTab }: { user: User; activeTab: str
     setForceOpenProfile(true);
   };
 
+  const handleOpenReceiptReader = () => {
+    setActiveTab('lancamentos');
+    setForceOpenReceiptReader(true);
+  };
+
   return (
     <Layout 
       activeTab={activeTab} 
@@ -163,6 +169,7 @@ function MainApp({ user, activeTab, setActiveTab }: { user: User; activeTab: str
           manutencoes={manutencoes}
           refetch={refetch}
           user={user}
+          onReadReceipt={handleOpenReceiptReader}
         />
       )}
       {activeTab === 'lancamentos' && (
@@ -174,6 +181,8 @@ function MainApp({ user, activeTab, setActiveTab }: { user: User; activeTab: str
           user={user}
           forceOpenForm={isNewLancamentoOpen}
           onFormClose={() => setIsNewLancamentoOpen(false)}
+          forceOpenReceiptReader={forceOpenReceiptReader}
+          onReceiptReaderClose={() => setForceOpenReceiptReader(false)}
         />
       )}
       {activeTab === 'relatorios' && <Relatorios lancamentos={lancamentos} vehicles={vehicles} user={user} />}
