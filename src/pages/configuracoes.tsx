@@ -197,9 +197,10 @@ export function Configuracoes({ categorias, user, refetch, onNavigateToRelatorio
     }
   };
 
-  const copyReferralCode = () => {
-    navigator.clipboard.writeText(referralCode);
-    alert('Código copiado para a área de transferência!');
+  const copyReferralLink = () => {
+    const link = `${window.location.origin}?ref=${referralCode}`;
+    navigator.clipboard.writeText(link);
+    alert('Link copiado para a área de transferência!');
   };
 
   const receitas = categorias.filter((c) => c.tipo === 'receita');
@@ -442,7 +443,7 @@ export function Configuracoes({ categorias, user, refetch, onNavigateToRelatorio
                 <div className="bg-emerald-50 dark:bg-emerald-900/10 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
                   <h4 className="font-semibold text-emerald-800 dark:text-emerald-300 mb-2">Como funciona?</h4>
                   <ul className="text-sm text-emerald-700 dark:text-emerald-400 space-y-1 list-disc list-inside">
-                    <li>Compartilhe seu código com amigos.</li>
+                    <li>Compartilhe seu link com amigos.</li>
                     <li>Eles ganham 15 dias de Premium ao se cadastrar.</li>
                     <li>Você ganha 1 mês de Premium automaticamente!</li>
                   </ul>
@@ -450,10 +451,10 @@ export function Configuracoes({ categorias, user, refetch, onNavigateToRelatorio
 
                 {referralCode ? (
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Seu Código de Indicação</label>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Seu Link de Indicação</label>
                     <div className="flex gap-2">
-                      <Input value={referralCode} readOnly className="font-mono text-lg tracking-wider text-center bg-gray-50 dark:bg-gray-800/50" />
-                      <Button onClick={copyReferralCode} variant="outline" className="shrink-0">
+                      <Input value={`${window.location.origin}?ref=${referralCode}`} readOnly className="font-mono text-sm tracking-tight text-center bg-gray-50 dark:bg-gray-800/50" />
+                      <Button onClick={copyReferralLink} variant="outline" className="shrink-0">
                         <Copy className="h-4 w-4 mr-2" />
                         Copiar
                       </Button>
@@ -461,9 +462,9 @@ export function Configuracoes({ categorias, user, refetch, onNavigateToRelatorio
                   </div>
                 ) : (
                   <div className="text-center py-4">
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Você ainda não tem um código de indicação.</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Você ainda não tem um link de indicação.</p>
                     <Button onClick={generateReferralCode} disabled={referralLoading} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                      {referralLoading ? 'Gerando...' : 'Gerar Meu Código'}
+                      {referralLoading ? 'Gerando...' : 'Gerar Meu Link'}
                     </Button>
                   </div>
                 )}

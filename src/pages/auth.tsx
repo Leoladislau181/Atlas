@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,15 @@ export function Auth() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSignUp, setIsSignUp] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const refCode = params.get('ref');
+    if (refCode) {
+      setReferredBy(refCode.toUpperCase());
+      setIsSignUp(true);
+    }
+  }, []);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,16 +136,10 @@ export function Auth() {
                   className="h-12 bg-gray-50/50 dark:bg-gray-800/50"
                 />
               </div>
-              {isSignUp && (
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Código de Indicação (Opcional)</label>
-                  <Input
-                    type="text"
-                    placeholder="Ex: ABC123"
-                    value={referredBy}
-                    onChange={(e) => setReferredBy(e.target.value.toUpperCase())}
-                    className="h-12 bg-gray-50/50 dark:bg-gray-800/50 uppercase"
-                  />
+              {isSignUp && referredBy && (
+                <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-sm text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800 flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4" />
+                  <span>Convite especial aplicado!</span>
                 </div>
               )}
               {error && (
