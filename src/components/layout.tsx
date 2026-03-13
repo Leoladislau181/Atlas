@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, Home, List, BarChart2, Car, Settings, User as UserIcon, Plus } from 'lucide-react';
+import { LogOut, Home, List, BarChart2, Car, Settings, User as UserIcon, Plus, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { User } from '@/types';
@@ -18,6 +18,7 @@ export function Layout({ children, activeTab, setActiveTab, onNewLancamento, onP
     { id: 'inicio', label: 'Início', icon: Home },
     { id: 'lancamentos', label: 'Lançamentos', icon: List },
     { id: 'veiculos', label: 'Veículos', icon: Car },
+    { id: 'premium', label: 'Premium', icon: Star },
     { id: 'configuracoes', label: 'Configurações', icon: Settings },
   ];
 

@@ -16,11 +16,12 @@ interface ConfiguracoesProps {
   user: User;
   refetch: () => void;
   onNavigateToRelatorios?: () => void;
+  onNavigateToPremium?: () => void;
   forceOpenProfile?: boolean;
   onProfileOpened?: () => void;
 }
 
-export function Configuracoes({ categorias, user, refetch, onNavigateToRelatorios, forceOpenProfile, onProfileOpened }: ConfiguracoesProps) {
+export function Configuracoes({ categorias, user, refetch, onNavigateToRelatorios, onNavigateToPremium, forceOpenProfile, onProfileOpened }: ConfiguracoesProps) {
   const [nome, setNome] = useState('');
   const [tipo, setTipo] = useState<TipoLancamento>('despesa');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -405,11 +406,10 @@ export function Configuracoes({ categorias, user, refetch, onNavigateToRelatorio
                   
                   {!isPremium(user) && (
                     <Button 
-                      onClick={handleTestPremium} 
-                      disabled={planLoading} 
+                      onClick={onNavigateToPremium} 
                       className="w-full bg-amber-500 hover:bg-amber-600 text-white"
                     >
-                      {planLoading ? 'Ativando...' : 'Ativar Premium (Modo Teste)'}
+                      Ver Planos Premium
                     </Button>
                   )}
                 </div>
@@ -665,11 +665,11 @@ export function Configuracoes({ categorias, user, refetch, onNavigateToRelatorio
         <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">
           Tem certeza que deseja excluir esta categoria? Não será possível excluir se houver lançamentos vinculados a ela.
         </p>
-        <div className="flex justify-end space-x-3">
-          <Button variant="outline" onClick={() => setDeleteModalOpen(false)}>
+        <div className="flex flex-col sm:flex-row justify-end gap-2">
+          <Button variant="outline" onClick={() => setDeleteModalOpen(false)} className="w-full sm:w-auto">
             Cancelar
           </Button>
-          <Button variant="destructive" onClick={handleDelete}>
+          <Button variant="destructive" onClick={handleDelete} className="w-full sm:w-auto">
             Confirmar Exclusão
           </Button>
         </div>

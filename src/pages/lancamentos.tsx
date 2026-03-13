@@ -699,7 +699,7 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, 
         title={editingId ? 'Editar Lançamento' : 'Novo Lançamento'}
         className="max-w-2xl"
       >
-        <form onSubmit={handleSubmit} className="space-y-6 pt-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tipo</label>
@@ -826,23 +826,21 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, 
                 onChange={(e) => setObservacao(e.target.value)}
               />
             </div>
-            <div className="flex justify-end pt-4">
-              {editingId && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="mr-2"
-                  onClick={() => {
-                    setEditingId(null);
-                    setValorStr('');
-                    setObservacao('');
-                    setIsFormOpen(false);
-                  }}
-                >
-                  Cancelar
-                </Button>
-              )}
-              <Button type="submit" disabled={loading || filteredCategorias.length === 0} className="w-full sm:w-auto bg-[#F59E0B] hover:bg-[#D97706]">
+            <div className="flex flex-col sm:flex-row justify-end pt-4 gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full sm:w-auto"
+                onClick={() => {
+                  setEditingId(null);
+                  setValorStr('');
+                  setObservacao('');
+                  setIsFormOpen(false);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={loading || filteredCategorias.length === 0} className="w-full sm:w-auto bg-[#F59E0B] hover:bg-[#D97706] text-white">
                 {loading ? 'Salvando...' : editingId ? 'Atualizar Lançamento' : 'Salvar Lançamento'}
               </Button>
             </div>
@@ -1025,11 +1023,11 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, 
         <p className="mb-6 text-sm text-gray-600 dark:text-gray-300">
           Tem certeza que deseja excluir este lançamento? Esta ação não poderá ser desfeita.
         </p>
-        <div className="flex justify-end space-x-3">
-          <Button variant="outline" onClick={() => setDeleteModalOpen(false)}>
+        <div className="flex flex-col sm:flex-row justify-end gap-2">
+          <Button variant="outline" onClick={() => setDeleteModalOpen(false)} className="w-full sm:w-auto">
             Cancelar
           </Button>
-          <Button variant="destructive" onClick={handleDelete}>
+          <Button variant="destructive" onClick={handleDelete} className="w-full sm:w-auto">
             Confirmar Exclusão
           </Button>
         </div>

@@ -9,6 +9,7 @@ import { Lancamentos } from '@/pages/lancamentos';
 import { Relatorios } from '@/pages/relatorios';
 import { Configuracoes } from '@/pages/configuracoes';
 import { Veiculos } from '@/pages/veiculos';
+import { Premium } from '@/pages/premium';
 import { useFinanceData } from '@/hooks/useFinanceData';
 
 import { ThemeProvider } from '@/components/theme-provider';
@@ -195,12 +196,16 @@ function MainApp({ user, activeTab, setActiveTab }: { user: User; activeTab: str
           user={user}
         />
       )}
+      {activeTab === 'premium' && (
+        <Premium user={user} refetch={refetch} />
+      )}
       {activeTab === 'configuracoes' && (
         <Configuracoes 
           categorias={categorias} 
           user={user} 
           refetch={refetch} 
           onNavigateToRelatorios={() => setActiveTab('relatorios')}
+          onNavigateToPremium={() => setActiveTab('premium')}
           forceOpenProfile={forceOpenProfile}
           onProfileOpened={() => setForceOpenProfile(false)}
         />

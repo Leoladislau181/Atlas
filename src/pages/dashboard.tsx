@@ -470,7 +470,7 @@ export function Dashboard({ lancamentos, categorias, vehicles, manutencoes, refe
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Valor Pago (R$)</label>
               <Input
@@ -572,11 +572,11 @@ export function Dashboard({ lancamentos, categorias, vehicles, manutencoes, refe
               onChange={(e) => setPerformObs(e.target.value)}
             />
           </div>
-          <div className="flex justify-end space-x-3 pt-4">
-            <Button type="button" variant="outline" onClick={() => setPerformModalOpen(false)}>
+          <div className="flex flex-col sm:flex-row justify-end pt-4 gap-2">
+            <Button type="button" variant="outline" onClick={() => setPerformModalOpen(false)} className="w-full sm:w-auto">
               Cancelar
             </Button>
-            <Button type="submit" disabled={performLoading} className="bg-[#059568] hover:bg-[#047857] text-white">
+            <Button type="submit" disabled={performLoading} className="w-full sm:w-auto bg-[#059568] hover:bg-[#047857] text-white">
               {performLoading ? 'Salvando...' : 'Confirmar e Lançar'}
             </Button>
           </div>

@@ -421,7 +421,7 @@ export function Veiculos({ vehicles, lancamentos, manutencoes, refetch, user }: 
               alert('Usuários do plano gratuito podem cadastrar apenas 1 veículo. Faça o upgrade para cadastrar mais veículos.');
               return;
             }
-            setIsFormOpen(!isFormOpen);
+            setIsFormOpen(true);
           }}
         >
           <div className="flex items-center gap-3">
@@ -450,23 +450,24 @@ export function Veiculos({ vehicles, lancamentos, manutencoes, refetch, user }: 
             size="sm" 
             className="hidden sm:flex text-[#F59E0B] hover:text-[#D97706] hover:bg-[#F59E0B]/5 dark:hover:bg-[#F59E0B]/10"
           >
-            {isFormOpen ? (
-              <div className="flex items-center gap-2">
-                <span>Recolher</span>
-                <ChevronUp className="h-4 w-4" />
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                <span>Cadastrar Veículo</span>
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              <span>Cadastrar Veículo</span>
+            </div>
           </Button>
         </div>
+      </Card>
 
-        {isFormOpen && (
-          <CardContent className="pt-0 border-t border-gray-100 dark:border-gray-800">
-            <form onSubmit={handleSubmit} className="space-y-6 pt-6">
+      <Modal
+        isOpen={isFormOpen}
+        onClose={() => {
+          setIsFormOpen(false);
+          resetForm();
+        }}
+        title={editingId ? 'Editar Veículo' : 'Novo Veículo'}
+        className="max-w-2xl"
+      >
+        <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Nome do Veículo *</label>
@@ -609,24 +610,23 @@ export function Veiculos({ vehicles, lancamentos, manutencoes, refetch, user }: 
               )}
 
               <div className="flex flex-col sm:flex-row justify-end pt-4 gap-2">
-                {editingId && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={resetForm}
-                    className="w-full sm:w-auto"
-                  >
-                    Cancelar
-                  </Button>
-                )}
-                <Button type="submit" disabled={loading} className="w-full sm:w-auto bg-[#F59E0B] hover:bg-[#D97706]">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setIsFormOpen(false);
+                    resetForm();
+                  }}
+                  className="w-full sm:w-auto"
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={loading} className="w-full sm:w-auto bg-[#F59E0B] hover:bg-[#D97706] text-white">
                   {loading ? 'Salvando...' : editingId ? 'Atualizar Veículo' : 'Salvar Veículo'}
                 </Button>
               </div>
             </form>
-          </CardContent>
-        )}
-      </Card>
+      </Modal>
 
       <div className="flex flex-col gap-4">
         {sortedVehicles.map((v) => {
@@ -786,11 +786,11 @@ export function Veiculos({ vehicles, lancamentos, manutencoes, refetch, user }: 
         <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">
           Tem certeza que deseja excluir este veículo? Os lançamentos atrelados a ele não serão apagados, apenas perderão o vínculo.
         </p>
-        <div className="flex justify-end space-x-3">
-          <Button variant="outline" onClick={() => setDeleteModalOpen(false)}>
+        <div className="flex flex-col sm:flex-row justify-end gap-2">
+          <Button variant="outline" onClick={() => setDeleteModalOpen(false)} className="w-full sm:w-auto">
             Cancelar
           </Button>
-          <Button variant="destructive" onClick={handleDelete}>
+          <Button variant="destructive" onClick={handleDelete} className="w-full sm:w-auto">
             Confirmar Exclusão
           </Button>
         </div>
@@ -875,11 +875,11 @@ export function Veiculos({ vehicles, lancamentos, manutencoes, refetch, user }: 
               Somar KM restante do contrato anterior ao novo contrato?
             </label>
           </div>
-          <div className="flex justify-end space-x-3 pt-4">
-            <Button type="button" variant="outline" onClick={() => setRenewModalOpen(false)}>
+          <div className="flex flex-col sm:flex-row justify-end pt-4 gap-2">
+            <Button type="button" variant="outline" onClick={() => setRenewModalOpen(false)} className="w-full sm:w-auto">
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="w-full sm:w-auto bg-[#F59E0B] hover:bg-[#D97706] text-white">
               {loading ? 'Salvando...' : 'Confirmar Renovação'}
             </Button>
           </div>
@@ -994,11 +994,11 @@ export function Veiculos({ vehicles, lancamentos, manutencoes, refetch, user }: 
         <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">
           Tem certeza que deseja excluir este plano de manutenção?
         </p>
-        <div className="flex justify-end space-x-3">
-          <Button variant="outline" onClick={() => setDeleteMaintenanceModalOpen(false)}>
+        <div className="flex flex-col sm:flex-row justify-end gap-2">
+          <Button variant="outline" onClick={() => setDeleteMaintenanceModalOpen(false)} className="w-full sm:w-auto">
             Cancelar
           </Button>
-          <Button variant="destructive" onClick={confirmDeleteMaintenance}>
+          <Button variant="destructive" onClick={confirmDeleteMaintenance} className="w-full sm:w-auto">
             Confirmar Exclusão
           </Button>
         </div>
