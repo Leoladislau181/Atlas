@@ -429,7 +429,7 @@ export function Configuracoes({ categorias, user, refetch, onNavigateToRelatorio
               </div>
               <div>
                 <h3 className="font-bold text-gray-900 dark:text-gray-100">Indique e Ganhe Premium</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Ganhe 1 mês grátis por cada amigo que se cadastrar</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Ganhe 1 mês grátis por cada amigo que usar o app</p>
               </div>
             </div>
             <Button variant="ghost" size="sm" className="text-gray-400 dark:text-gray-500">
@@ -445,7 +445,7 @@ export function Configuracoes({ categorias, user, refetch, onNavigateToRelatorio
                   <ul className="text-sm text-emerald-700 dark:text-emerald-400 space-y-1 list-disc list-inside">
                     <li>Compartilhe seu link com amigos.</li>
                     <li>Eles ganham 15 dias de Premium ao se cadastrar.</li>
-                    <li>Você ganha 1 mês de Premium automaticamente!</li>
+                    <li>Quando seu amigo registrar 10 corridas, você ganha 1 mês de Premium!</li>
                   </ul>
                 </div>
 
