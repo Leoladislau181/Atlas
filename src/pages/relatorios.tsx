@@ -413,7 +413,7 @@ export function Relatorios({ lancamentos, vehicles, user }: RelatoriosProps) {
         body: [
           ['Total Receitas', formatCurrency(stats.receitas)],
           ['Total Despesas', formatCurrency(stats.despesas)],
-          ['Lucro Líquido', formatCurrency(stats.lucroLiquido)],
+          ['Saldo', formatCurrency(stats.lucroLiquido)],
           ['Saldo Acumulado', formatCurrency(stats.saldoAcumulado)],
         ],
         theme: 'striped',
@@ -587,7 +587,7 @@ export function Relatorios({ lancamentos, vehicles, user }: RelatoriosProps) {
       const summary = [
         { 'Item': 'Total Receitas', 'Valor': stats.receitas },
         { 'Item': 'Total Despesas', 'Valor': stats.despesas },
-        { 'Item': 'Lucro Líquido', 'Valor': stats.lucroLiquido },
+        { 'Item': 'Saldo', 'Valor': stats.lucroLiquido },
         { 'Item': 'Saldo Acumulado', 'Valor': stats.saldoAcumulado }
       ];
 
@@ -844,7 +844,7 @@ export function Relatorios({ lancamentos, vehicles, user }: RelatoriosProps) {
             <div className={`p-2 rounded-full ${stats.lucroLiquido >= 0 ? 'bg-green-50 dark:bg-[#059568]/20' : 'bg-red-50 dark:bg-[#EF4444]/20'}`}>
               <DollarSign className={`h-4 w-4 ${stats.lucroLiquido >= 0 ? 'text-[#059568] dark:text-[#10B981]' : 'text-[#EF4444] dark:text-[#F87171]'}`} />
             </div>
-            <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400">Lucro Líquido</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400">Saldo</CardTitle>
           </CardHeader>
           <CardContent>
             <div

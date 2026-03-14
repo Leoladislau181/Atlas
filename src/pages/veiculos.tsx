@@ -698,7 +698,7 @@ export function Veiculos({ vehicles, lancamentos, manutencoes, refetch, user }: 
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
-                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Lucro Líquido</p>
+                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Saldo</p>
                         <p className={`font-bold text-2xl ${metrics.lucroLiquido >= 0 ? 'text-[#059568] dark:text-[#10B981]' : 'text-[#EF4444] dark:text-[#F87171]'}`}>
                           {formatCurrency(metrics.lucroLiquido)}
                         </p>

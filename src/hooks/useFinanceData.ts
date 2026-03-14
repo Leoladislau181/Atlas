@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Categoria, Lancamento, Vehicle, Manutencao } from '@/types';
 
+const checkedUsers = new Set<string>();
+let isCreatingDefaults = false;
+
 export function useFinanceData() {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
@@ -27,27 +30,35 @@ export function useFinanceData() {
       if (catError) throw catError;
 
       // Check and create default categories if they don't exist
-      if (userId && catData) {
-        const defaultCategories = [
-          { nome: 'Manutenção', tipo: 'despesa', is_system_default: true, is_deductible: true },
-          { nome: 'Combustível', tipo: 'despesa', is_system_default: true, is_deductible: true },
-          { nome: 'Particular', tipo: 'receita', is_system_default: true, is_deductible: false },
-          { nome: 'Aluguel', tipo: 'despesa', is_system_default: true, is_deductible: true }
-        ];
+      if (userId && catData && !checkedUsers.has(userId) && !isCreatingDefaults) {
+        isCreatingDefaults = true;
+        try {
+          const defaultCategories = [
+            { nome: 'Manutenção', tipo: 'despesa', is_system_default: true, is_deductible: true },
+            { nome: 'Combustível', tipo: 'despesa', is_system_default: true, is_deductible: true },
+            { nome: 'Particular', tipo: 'receita', is_system_default: true, is_deductible: false },
+            { nome: 'Aluguel', tipo: 'despesa', is_system_default: true, is_deductible: true }
+          ];
 
-        const missingDefaults = defaultCategories.filter(
-          def => !catData!.some(c => c.nome.toLowerCase() === def.nome.toLowerCase() && c.tipo === def.tipo)
-        );
+          const missingDefaults = defaultCategories.filter(
+            def => !catData!.some(c => c.nome.toLowerCase() === def.nome.toLowerCase() && c.tipo === def.tipo)
+          );
 
-        if (missingDefaults.length > 0) {
-          const { data: newCats, error: insertError } = await supabase
-            .from('categorias')
-            .insert(missingDefaults.map(def => ({ ...def, user_id: userId })))
-            .select();
-          
-          if (!insertError && newCats) {
-            catData = [...catData, ...newCats].sort((a, b) => a.nome.localeCompare(b.nome));
+          if (missingDefaults.length > 0) {
+            const { data: newCats, error: insertError } = await supabase
+              .from('categorias')
+              .insert(missingDefaults.map(def => ({ ...def, user_id: userId })))
+              .select();
+            
+            if (!insertError && newCats) {
+              catData = [...catData, ...newCats].sort((a, b) => a.nome.localeCompare(b.nome));
+              checkedUsers.add(userId);
+            }
+          } else {
+            checkedUsers.add(userId);
           }
+        } finally {
+          isCreatingDefaults = false;
         }
       }
 

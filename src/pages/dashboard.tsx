@@ -346,7 +346,7 @@ export function Dashboard({ lancamentos, categorias, vehicles, manutencoes, refe
         <Card className="col-span-2 md:col-span-1 border-none shadow-sm bg-white dark:bg-gray-900 hover:shadow-md transition-all duration-200 text-center py-4">
           <CardHeader className="flex flex-row items-center justify-center gap-2 space-y-0 pb-2">
             <DollarSign className={`h-6 w-6 md:h-6 md:w-6 ${stats.lucroLiquido >= 0 ? 'text-[#059568] dark:text-[#10B981]' : 'text-[#EF4444] dark:text-[#F87171]'}`} />
-            <CardTitle className="text-base md:text-lg font-medium text-gray-500 dark:text-gray-400">Lucro Líquido</CardTitle>
+            <CardTitle className="text-base md:text-lg font-medium text-gray-500 dark:text-gray-400">Saldo</CardTitle>
           </CardHeader>
           <CardContent className="px-2">
             <div
