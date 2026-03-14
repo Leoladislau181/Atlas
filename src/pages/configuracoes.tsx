@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import { CustomSelect } from '@/components/ui/custom-select';
 import { Modal } from '@/components/ui/modal';
 import { Categoria, TipoLancamento, User } from '@/types';
 import { supabase } from '@/lib/supabase';
@@ -551,10 +552,14 @@ export function Configuracoes({ categorias, user, refetch, onNavigateToRelatorio
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tipo</label>
-                    <Select value={tipo} onChange={(e) => setTipo(e.target.value as TipoLancamento)}>
-                      <option value="despesa">Despesa</option>
-                      <option value="receita">Receita</option>
-                    </Select>
+                    <CustomSelect 
+                      value={tipo} 
+                      onChange={(val) => setTipo(val as TipoLancamento)}
+                      options={[
+                        { value: 'despesa', label: 'Despesa' },
+                        { value: 'receita', label: 'Receita' }
+                      ]}
+                    />
                   </div>
                 </div>
                 <div className="flex justify-end space-x-2 pt-4">

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
+import { CustomSelect } from '@/components/ui/custom-select';
 import { Modal } from '@/components/ui/modal';
 import { formatCurrency, formatCurrencyInput, parseCurrency, isPremium } from '@/lib/utils';
 import { Lancamento, Vehicle, Manutencao, User } from '@/types';
@@ -491,26 +491,30 @@ export function Veiculos({ vehicles, lancamentos, manutencoes, refetch, user }: 
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tipo *</label>
-                  <Select value={type} onChange={(e) => {
-                    const newType = e.target.value as 'own' | 'rented';
-                    setType(newType);
-                    if (newType === 'own' && status === 'deactivated') setStatus('active');
-                    if (newType === 'rented' && status === 'sold') setStatus('active');
-                  }}>
-                    <option value="own">Próprio</option>
-                    <option value="rented">Alugado</option>
-                  </Select>
+                  <CustomSelect 
+                    value={type} 
+                    onChange={(val) => {
+                      const newType = val as 'own' | 'rented';
+                      setType(newType);
+                      if (newType === 'own' && status === 'deactivated') setStatus('active');
+                      if (newType === 'rented' && status === 'sold') setStatus('active');
+                    }}
+                    options={[
+                      { value: 'own', label: 'Próprio' },
+                      { value: 'rented', label: 'Alugado' }
+                    ]}
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Status *</label>
-                  <Select value={status} onChange={(e) => setStatus(e.target.value as any)}>
-                    <option value="active">Ativo</option>
-                    {type === 'own' ? (
-                      <option value="sold">Vendido</option>
-                    ) : (
-                      <option value="deactivated">Desativado</option>
-                    )}
-                  </Select>
+                  <CustomSelect 
+                    value={status} 
+                    onChange={(val) => setStatus(val as any)}
+                    options={[
+                      { value: 'active', label: 'Ativo' },
+                      ...(type === 'own' ? [{ value: 'sold', label: 'Vendido' }] : [{ value: 'deactivated', label: 'Desativado' }])
+                    ]}
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Odômetro Inicial (KM) *</label>

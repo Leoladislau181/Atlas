@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
+import { CustomSelect } from '@/components/ui/custom-select';
 import { Input } from '@/components/ui/input';
 import { formatCurrency, parseLocalDate, isPremium } from '@/lib/utils';
 import { Lancamento, Vehicle, User } from '@/types';
@@ -652,55 +653,57 @@ export function Relatorios({ lancamentos, vehicles, user }: RelatoriosProps) {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Filtro</label>
-                <Select value={filterType} onChange={(e) => setFilterType(e.target.value as any)}>
-                  <option value="month">Por Mês</option>
-                  <option value="year">Por Ano</option>
-                  <option value="custom">Período Personalizado</option>
-                </Select>
+                <CustomSelect 
+                  value={filterType} 
+                  onChange={(val) => setFilterType(val as any)}
+                  options={[
+                    { value: 'month', label: 'Por Mês' },
+                    { value: 'year', label: 'Por Ano' },
+                    { value: 'custom', label: 'Período Personalizado' }
+                  ]}
+                />
               </div>
 
               {filterType === 'month' ? (
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Ano</label>
-                    <Select 
+                    <CustomSelect 
                       value={selectedMonth.split('-')[0]} 
-                      onChange={(e) => setSelectedMonth(`${e.target.value}-${selectedMonth.split('-')[1]}`)}
-                    >
-                      {Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i).map(year => (
-                        <option key={year} value={year.toString()}>{year}</option>
-                      ))}
-                    </Select>
+                      onChange={(val) => setSelectedMonth(`${val}-${selectedMonth.split('-')[1]}`)}
+                      options={Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i).map(year => ({
+                        value: year.toString(),
+                        label: year.toString()
+                      }))}
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Mês</label>
-                    <Select 
+                    <CustomSelect 
                       value={selectedMonth.split('-')[1]} 
-                      onChange={(e) => setSelectedMonth(`${selectedMonth.split('-')[0]}-${e.target.value}`)}
-                    >
-                      {Array.from({ length: 12 }, (_, i) => {
+                      onChange={(val) => setSelectedMonth(`${selectedMonth.split('-')[0]}-${val}`)}
+                      options={Array.from({ length: 12 }, (_, i) => {
                         const monthNum = (i + 1).toString().padStart(2, '0');
                         const monthName = format(new Date(2000, i, 1), 'MMMM', { locale: ptBR });
-                        return (
-                          <option key={monthNum} value={monthNum} className="capitalize">
-                            {monthName.charAt(0).toUpperCase() + monthName.slice(1)}
-                          </option>
-                        );
+                        return {
+                          value: monthNum,
+                          label: monthName.charAt(0).toUpperCase() + monthName.slice(1)
+                        };
                       })}
-                    </Select>
+                    />
                   </div>
                 </div>
               ) : filterType === 'year' ? (
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Ano</label>
-                  <Select 
+                  <CustomSelect 
                     value={selectedYear} 
-                    onChange={(e) => setSelectedYear(e.target.value)}
-                  >
-                    {Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i).map(year => (
-                      <option key={year} value={year.toString()}>{year}</option>
-                    ))}
-                  </Select>
+                    onChange={setSelectedYear}
+                    options={Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i).map(year => ({
+                      value: year.toString(),
+                      label: year.toString()
+                    }))}
+                  />
                 </div>
               ) : (
                 <>
@@ -725,14 +728,14 @@ export function Relatorios({ lancamentos, vehicles, user }: RelatoriosProps) {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Veículo</label>
-                <Select value={selectedVehicleId} onChange={(e) => setSelectedVehicleId(e.target.value)}>
-                  <option value="all">Todos os Veículos</option>
-                  {vehicles.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.name} ({v.plate})
-                    </option>
-                  ))}
-                </Select>
+                <CustomSelect 
+                  value={selectedVehicleId} 
+                  onChange={setSelectedVehicleId}
+                  options={[
+                    { value: 'all', label: 'Todos os Veículos' },
+                    ...vehicles.map(v => ({ value: v.id, label: `${v.name} (${v.plate})` }))
+                  ]}
+                />
               </div>
 
               <div className="sm:col-span-2 lg:col-span-1">

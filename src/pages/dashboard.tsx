@@ -12,6 +12,7 @@ import { ArrowUpCircle, ArrowDownCircle, DollarSign, Wallet, Filter, Zap, Fuel, 
 import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import { CustomSelect } from '@/components/ui/custom-select';
 import { supabase } from '@/lib/supabase';
 
 interface DashboardProps {
@@ -456,18 +457,14 @@ export function Dashboard({ lancamentos, categorias, vehicles, manutencoes, refe
         <form onSubmit={handleQuickEntry} className="space-y-4">
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Veículo</label>
-            <Select 
+            <CustomSelect 
               value={quickVehicleId} 
-              onChange={(e) => setQuickVehicleId(e.target.value)}
-              required
-            >
-              <option value="" disabled>Selecione um veículo</option>
-              {vehicles.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.name} ({v.plate})
-                </option>
-              ))}
-            </Select>
+              onChange={setQuickVehicleId}
+              options={[
+                { value: '', label: 'Selecione um veículo' },
+                ...vehicles.map(v => ({ value: v.id, label: `${v.name} (${v.plate})` }))
+              ]}
+            />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

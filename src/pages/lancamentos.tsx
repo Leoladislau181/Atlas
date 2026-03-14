@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import { CustomSelect } from '@/components/ui/custom-select';
 import { Modal } from '@/components/ui/modal';
 import { cn, formatCurrency, formatCurrencyInput, parseCurrency, parseLocalDate, isPremium } from '@/lib/utils';
 import { Categoria, Lancamento, TipoLancamento, Vehicle, User } from '@/types';
@@ -10,9 +11,6 @@ import { supabase } from '@/lib/supabase';
 import { Edit2, Trash2, Car, Plus, ChevronUp, Filter, Search, ChevronLeft, ChevronRight, Calendar, Download, TrendingUp, TrendingDown, DollarSign, Camera, Loader2, Lock } from 'lucide-react';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { parseReceiptImage } from '@/services/geminiService';
 
 interface LancamentosProps {
@@ -36,8 +34,8 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, 
   const [observacao, setObservacao] = useState('');
   
   // Vehicle fields
-  const [useVehicle, setUseVehicle] = useState(false);
   const [vehicleId, setVehicleId] = useState('');
+  const useVehicle = vehicleId !== '';
   const [odometer, setOdometer] = useState('');
   const [fuelPricePerLiterStr, setFuelPricePerLiterStr] = useState('');
 
@@ -48,9 +46,6 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-  const [exportLoading, setExportLoading] = useState(false);
 
   const [isReadingReceipt, setIsReadingReceipt] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -147,7 +142,6 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, 
           if (result.data) setData(result.data);
           
           if (result.litros && result.preco_litro) {
-            setUseVehicle(true);
             setFuelPricePerLiterStr(formatCurrency(result.preco_litro));
           }
 
@@ -269,7 +263,6 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, 
       setValorStr('');
       setData(format(new Date(), 'yyyy-MM-dd'));
       setObservacao('');
-      setUseVehicle(false);
       setVehicleId('');
       setOdometer('');
       setFuelPricePerLiterStr('');
@@ -293,7 +286,6 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, 
     setObservacao(lancamento.observacao || '');
     
     if (lancamento.vehicle_id) {
-      setUseVehicle(true);
       setVehicleId(lancamento.vehicle_id);
       setOdometer(lancamento.odometer ? lancamento.odometer.toString() : '');
       if (lancamento.fuel_price_per_liter) {
@@ -302,7 +294,6 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, 
         setFuelPricePerLiterStr('');
       }
     } else {
-      setUseVehicle(false);
       setVehicleId('');
       setOdometer('');
       setFuelPricePerLiterStr('');
@@ -363,110 +354,6 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, 
     return { receitas, despesas, saldo: receitas - despesas };
   }, [filteredLancamentos]);
 
-  const exportToExcel = (fileFormat: 'xlsx' | 'csv') => {
-    setExportLoading(true);
-    try {
-      const data = sortedLancamentos.map(l => ({
-        'Data': format(parseLocalDate(l.data), 'dd/MM/yyyy'),
-        'Descrição': l.observacao || '',
-        'Categoria': l.categorias?.nome || '-',
-        'Tipo': l.tipo === 'receita' ? 'Receita' : 'Despesa',
-        'Valor': Number(l.valor),
-        'Veículo': l.vehicles?.name || '-',
-        'Placa': l.vehicles?.plate || '-'
-      }));
-
-      const ws = XLSX.utils.json_to_sheet(data);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Lançamentos');
-      
-      if (fileFormat === 'xlsx') {
-        XLSX.writeFile(wb, `lancamentos-${format(selectedDate, 'yyyy-MM')}.xlsx`);
-      } else {
-        XLSX.writeFile(wb, `lancamentos-${format(selectedDate, 'yyyy-MM')}.csv`, { bookType: 'csv' });
-      }
-      setIsExportModalOpen(false);
-    } catch (error) {
-      console.error("Export error:", error);
-      alert("Erro ao exportar arquivo.");
-    } finally {
-      setExportLoading(false);
-    }
-  };
-
-  const exportToPDF = () => {
-    setExportLoading(true);
-    try {
-      const doc = new jsPDF();
-      const pageWidth = doc.internal.pageSize.width;
-      const pageHeight = doc.internal.pageSize.height;
-
-      doc.setFontSize(20);
-      doc.setTextColor(15, 23, 42);
-      doc.text('Relatório de Lançamentos', 15, 20);
-
-      doc.setFontSize(12);
-      doc.setTextColor(100, 116, 139);
-      doc.text(`Período: ${format(selectedDate, 'MMMM yyyy', { locale: ptBR })}`, 15, 30);
-
-      let currentY = 40;
-
-      const tableData = sortedLancamentos.map(l => [
-        format(parseLocalDate(l.data), 'dd/MM/yyyy'),
-        l.observacao || '-',
-        l.categorias?.nome || '-',
-        l.vehicles?.name || '-',
-        l.tipo === 'receita' ? 'RECEITA' : 'DESPESA',
-        formatCurrency(Number(l.valor))
-      ]);
-
-      autoTable(doc, {
-        startY: currentY,
-        head: [['Data', 'Descrição', 'Categoria', 'Veículo', 'Tipo', 'Valor']],
-        body: tableData,
-        theme: 'grid',
-        headStyles: { fillColor: [55, 65, 81] },
-        columnStyles: {
-          5: { halign: 'right' }
-        },
-        didParseCell: (data) => {
-          if (data.section === 'body' && data.column.index === 4) {
-            if (data.cell.text[0] === 'RECEITA') {
-              data.cell.styles.textColor = [5, 149, 104];
-            } else {
-              data.cell.styles.textColor = [239, 68, 68];
-            }
-          }
-        }
-      });
-
-      const totalPages = (doc as any).internal.getNumberOfPages();
-      for (let i = 1; i <= totalPages; i++) {
-        doc.setPage(i);
-        doc.setFontSize(8);
-        doc.setTextColor(156, 163, 175);
-        doc.text(
-          `Gerado em ${format(new Date(), 'dd/MM/yyyy HH:mm')}`,
-          15,
-          pageHeight - 10
-        );
-        doc.text(
-          `Página ${i} de ${totalPages}`,
-          pageWidth - 30,
-          pageHeight - 10
-        );
-      }
-
-      doc.save(`lancamentos-${format(selectedDate, 'yyyy-MM')}.pdf`);
-      setIsExportModalOpen(false);
-    } catch (error) {
-      console.error("Export error:", error);
-      alert("Erro ao exportar PDF.");
-    } finally {
-      setExportLoading(false);
-    }
-  };
-
   const visibleLancamentos = sortedLancamentos.slice(0, visibleCount);
   const hasMore = visibleCount < sortedLancamentos.length;
 
@@ -513,39 +400,6 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, 
             onChange={handleReceiptUpload}
             className="hidden"
           />
-          <Button
-            variant="outline"
-            className="hidden sm:flex items-center gap-2 bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400 dark:border-indigo-800/50"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isReadingReceipt}
-          >
-            {isReadingReceipt ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-            Ler Nota Fiscal
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isReadingReceipt}
-            className="sm:hidden flex h-9 w-9 rounded-xl bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400 dark:border-indigo-800/50"
-          >
-            {isReadingReceipt ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => {
-              if (!isPremium(user)) {
-                alert('A exportação de relatórios é uma funcionalidade exclusiva do plano Premium.');
-                return;
-              }
-              setIsExportModalOpen(true);
-            }}
-            title="Exportar"
-            className="flex h-9 w-9 sm:h-11 sm:w-11 rounded-xl text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-          >
-            <Download className="h-4 w-4 sm:h-5 sm:w-5" />
-          </Button>
           <Button
             variant="outline"
             size="icon"
@@ -632,45 +486,40 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, 
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo</label>
-                <Select
+                <CustomSelect
                   value={filterTipo}
-                  onChange={(e) => setFilterTipo(e.target.value as any)}
+                  onChange={(val) => setFilterTipo(val as any)}
                   className="h-11 rounded-xl border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50"
-                >
-                  <option value="all">Todos os Tipos</option>
-                  <option value="receita">Receitas</option>
-                  <option value="despesa">Despesas</option>
-                </Select>
+                  options={[
+                    { value: 'all', label: 'Todos os Tipos' },
+                    { value: 'receita', label: 'Receitas' },
+                    { value: 'despesa', label: 'Despesas' }
+                  ]}
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Categoria</label>
-                <Select
+                <CustomSelect
                   value={filterCategoriaId}
-                  onChange={(e) => setFilterCategoriaId(e.target.value)}
+                  onChange={setFilterCategoriaId}
                   className="h-11 rounded-xl border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50"
-                >
-                  <option value="all">Todas as Categorias</option>
-                  {categorias.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nome}
-                    </option>
-                  ))}
-                </Select>
+                  options={[
+                    { value: 'all', label: 'Todas as Categorias' },
+                    ...categorias.map(c => ({ value: c.id, label: c.nome }))
+                  ]}
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Veículo</label>
-                <Select
+                <CustomSelect
                   value={filterVehicleId}
-                  onChange={(e) => setFilterVehicleId(e.target.value)}
+                  onChange={setFilterVehicleId}
                   className="h-11 rounded-xl border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50"
-                >
-                  <option value="all">Todos os Veículos</option>
-                  {vehicles.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.name} - {v.plate}
-                    </option>
-                  ))}
-                </Select>
+                  options={[
+                    { value: 'all', label: 'Todos os Veículos' },
+                    ...vehicles.map(v => ({ value: v.id, label: `${v.name} - ${v.plate}` }))
+                  ]}
+                />
               </div>
             </div>
           </CardContent>
@@ -704,23 +553,23 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, 
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tipo</label>
-                <Select value={tipo} onChange={(e) => setTipo(e.target.value as TipoLancamento)}>
-                  <option value="despesa">Despesa</option>
-                  <option value="receita">Receita</option>
-                </Select>
+                <CustomSelect 
+                  value={tipo} 
+                  onChange={(val) => setTipo(val as TipoLancamento)}
+                  options={[
+                    { value: 'despesa', label: 'Despesa' },
+                    { value: 'receita', label: 'Receita' }
+                  ]}
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Categoria</label>
-                <Select value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)}>
-                  {filteredCategorias.length === 0 && (
-                    <option value="" disabled>Nenhuma categoria</option>
-                  )}
-                  {filteredCategorias.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nome}
-                    </option>
-                  ))}
-                </Select>
+                <CustomSelect 
+                  value={categoriaId} 
+                  onChange={setCategoriaId}
+                  options={filteredCategorias.map(c => ({ value: c.id, label: c.nome }))}
+                  placeholder={filteredCategorias.length === 0 ? "Nenhuma categoria" : "Selecione uma categoria"}
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -746,34 +595,21 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, 
               </div>
             </div>
 
-            <div className="flex items-center space-x-2 py-2">
-              <input
-                type="checkbox"
-                id="useVehicle"
-                checked={useVehicle}
-                onChange={(e) => setUseVehicle(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-[#F59E0B] focus:ring-[#F59E0B] dark:bg-gray-700"
-              />
-              <label htmlFor="useVehicle" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Atrelar a um veículo?
-              </label>
-            </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Veículo (Opcional)</label>
+                <CustomSelect 
+                  value={vehicleId} 
+                  onChange={setVehicleId}
+                  options={[
+                    { value: '', label: 'Nenhum veículo' },
+                    ...vehicles.map(v => ({ value: v.id, label: `${v.name} (${v.plate})` }))
+                  ]}
+                />
+              </div>
 
-            {useVehicle && (
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-800">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Veículo *</label>
-                  <Select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)}>
-                    <option value="" disabled>Selecione um veículo</option>
-                    {vehicles.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.name} ({v.plate})
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-                
-                {tipo === 'despesa' && (
+              {useVehicle && tipo === 'despesa' && (
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-800">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Odômetro Atual (KM) *</label>
                     <Input
@@ -785,38 +621,38 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, 
                       required={useVehicle && tipo === 'despesa'}
                     />
                   </div>
-                )}
 
-                {tipo === 'despesa' && isCombustivel() && (
-                  <>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Valor por Litro</label>
-                      <Input
-                        type="text"
-                        inputMode="decimal"
-                        placeholder="R$ 0,00"
-                        value={fuelPricePerLiterStr}
-                        onChange={(e) => setFuelPricePerLiterStr(formatCurrencyInput(e.target.value))}
-                        required={useVehicle && tipo === 'despesa' && isCombustivel()}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Litros (Calculado)</label>
-                      <Input
-                        type="text"
-                        value={
-                          parseCurrency(fuelPricePerLiterStr) > 0 && parseCurrency(valorStr) > 0
-                            ? (parseCurrency(valorStr) / parseCurrency(fuelPricePerLiterStr)).toFixed(2) + ' L'
-                            : '0.00 L'
-                        }
-                        disabled
-                        className="bg-gray-100 dark:bg-gray-800"
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
+                  {isCombustivel() && (
+                    <>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Valor por Litro</label>
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="R$ 0,00"
+                          value={fuelPricePerLiterStr}
+                          onChange={(e) => setFuelPricePerLiterStr(formatCurrencyInput(e.target.value))}
+                          required={useVehicle && tipo === 'despesa' && isCombustivel()}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Litros (Calculado)</label>
+                        <Input
+                          type="text"
+                          value={
+                            parseCurrency(fuelPricePerLiterStr) > 0 && parseCurrency(valorStr) > 0
+                              ? (parseCurrency(valorStr) / parseCurrency(fuelPricePerLiterStr)).toFixed(2) + ' L'
+                              : '0.00 L'
+                          }
+                          disabled
+                          className="bg-gray-100 dark:bg-gray-800"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Observação</label>
@@ -1036,47 +872,6 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, 
           <Button variant="destructive" onClick={handleDelete} className="w-full sm:w-auto">
             Confirmar Exclusão
           </Button>
-        </div>
-      </Modal>
-
-      <Modal
-        isOpen={isExportModalOpen}
-        onClose={() => setIsExportModalOpen(false)}
-        title="Exportar Lançamentos"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Escolha o formato para exportar os lançamentos do mês selecionado.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Button
-              variant="outline"
-              className="h-24 flex flex-col items-center justify-center gap-2 hover:border-red-500 hover:text-red-600 dark:hover:border-red-400 dark:hover:text-red-400"
-              onClick={exportToPDF}
-              disabled={exportLoading}
-            >
-              <Download className="h-6 w-6" />
-              <span>PDF</span>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-24 flex flex-col items-center justify-center gap-2 hover:border-green-500 hover:text-green-600 dark:hover:border-green-400 dark:hover:text-green-400"
-              onClick={() => exportToExcel('xlsx')}
-              disabled={exportLoading}
-            >
-              <Download className="h-6 w-6" />
-              <span>Excel (.xlsx)</span>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-24 flex flex-col items-center justify-center gap-2 hover:border-blue-500 hover:text-blue-600 dark:hover:border-blue-400 dark:hover:text-blue-400"
-              onClick={() => exportToExcel('csv')}
-              disabled={exportLoading}
-            >
-              <Download className="h-6 w-6" />
-              <span>CSV</span>
-            </Button>
-          </div>
         </div>
       </Modal>
     </div>
