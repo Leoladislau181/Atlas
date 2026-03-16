@@ -30,8 +30,19 @@ export function Admin() {
         fetch('/api/admin/stats')
       ]);
 
-      const usersData = await usersRes.json();
-      const statsData = await statsRes.json();
+      let usersData, statsData;
+      
+      try {
+        usersData = await usersRes.json();
+      } catch (e) {
+        throw new Error('A resposta do servidor para usuários não é um JSON válido. O servidor pode estar reiniciando.');
+      }
+
+      try {
+        statsData = await statsRes.json();
+      } catch (e) {
+        throw new Error('A resposta do servidor para estatísticas não é um JSON válido. O servidor pode estar reiniciando.');
+      }
       
       if (!usersRes.ok) throw new Error(usersData.error || 'Erro ao buscar usuários');
       if (!statsRes.ok) throw new Error(statsData.error || 'Erro ao buscar estatísticas');
@@ -101,7 +112,12 @@ export function Admin() {
     setDetailsLoading(true);
     try {
       const response = await fetch(`/api/admin/users/${user.id}/stats`);
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (e) {
+        throw new Error('A resposta do servidor não é um JSON válido. O servidor pode estar reiniciando.');
+      }
       if (!response.ok) throw new Error(data.error);
       setUserDetails(data);
     } catch (err: any) {
