@@ -48,6 +48,63 @@ app.get("/api/admin/users", async (req, res) => {
   }
 });
 
+app.get("/api/admin/stats", async (req, res) => {
+  const supabaseUrl = process.env.VITE_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    return res.status(500).json({ error: "Configuração ausente." });
+  }
+
+  const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false }
+  });
+
+  try {
+    const { count: totalLancamentos } = await supabaseAdmin.from('lancamentos').select('*', { count: 'exact', head: true });
+    const { count: totalVeiculos } = await supabaseAdmin.from('vehicles').select('*', { count: 'exact', head: true });
+    const { count: totalManutencoes } = await supabaseAdmin.from('manutencoes').select('*', { count: 'exact', head: true });
+
+    res.json({
+      totalLancamentos: totalLancamentos || 0,
+      totalVeiculos: totalVeiculos || 0,
+      totalManutencoes: totalManutencoes || 0
+    });
+  } catch (error: any) {
+    console.error("Erro ao buscar estatísticas:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/admin/users/:id/stats", async (req, res) => {
+  const { id } = req.params;
+  const supabaseUrl = process.env.VITE_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    return res.status(500).json({ error: "Configuração ausente." });
+  }
+
+  const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false }
+  });
+
+  try {
+    const { count: totalLancamentos } = await supabaseAdmin.from('lancamentos').select('*', { count: 'exact', head: true }).eq('user_id', id);
+    const { count: totalVeiculos } = await supabaseAdmin.from('vehicles').select('*', { count: 'exact', head: true }).eq('user_id', id);
+    const { count: totalManutencoes } = await supabaseAdmin.from('manutencoes').select('*', { count: 'exact', head: true }).eq('user_id', id);
+
+    res.json({
+      totalLancamentos: totalLancamentos || 0,
+      totalVeiculos: totalVeiculos || 0,
+      totalManutencoes: totalManutencoes || 0
+    });
+  } catch (error: any) {
+    console.error("Erro ao buscar estatísticas do usuário:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post("/api/admin/users/:id/premium", async (req, res) => {
   const { id } = req.params;
   const { premium_until } = req.body;
