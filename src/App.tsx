@@ -24,6 +24,44 @@ export default function App() {
   const [premiumFeatureName, setPremiumFeatureName] = useState('');
 
   useEffect(() => {
+    const fetchUserProfile = async (sessionUser: any) => {
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', sessionUser.id)
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('Erro ao buscar perfil:', error);
+        }
+
+        setUser({ 
+          id: sessionUser.id, 
+          email: sessionUser.email || '',
+          nome: profile?.nome || sessionUser.user_metadata?.nome || '',
+          telefone: profile?.telefone || sessionUser.user_metadata?.telefone || '',
+          foto_url: profile?.foto_url || sessionUser.user_metadata?.foto_url || '',
+          referral_code: profile?.referral_code || sessionUser.user_metadata?.referral_code || '',
+          referred_by: profile?.referred_by || sessionUser.user_metadata?.referred_by || '',
+          premium_until: profile?.premium_until || sessionUser.user_metadata?.premium_until || ''
+        });
+      } catch (err) {
+        console.error('Erro ao buscar perfil:', err);
+        // Fallback to metadata
+        setUser({ 
+          id: sessionUser.id, 
+          email: sessionUser.email || '',
+          nome: sessionUser.user_metadata?.nome || '',
+          telefone: sessionUser.user_metadata?.telefone || '',
+          foto_url: sessionUser.user_metadata?.foto_url || '',
+          referral_code: sessionUser.user_metadata?.referral_code || '',
+          referred_by: sessionUser.user_metadata?.referred_by || '',
+          premium_until: sessionUser.user_metadata?.premium_until || ''
+        });
+      }
+    };
+
     const initializeAuth = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
@@ -41,16 +79,7 @@ export default function App() {
 
         setSession(session);
         if (session?.user) {
-          setUser({ 
-            id: session.user.id, 
-            email: session.user.email || '',
-            nome: session.user.user_metadata?.nome || '',
-            telefone: session.user.user_metadata?.telefone || '',
-            foto_url: session.user.user_metadata?.foto_url || '',
-            referral_code: session.user.user_metadata?.referral_code || '',
-            referred_by: session.user.user_metadata?.referred_by || '',
-            premium_until: session.user.user_metadata?.premium_until || ''
-          });
+          await fetchUserProfile(session.user);
         }
       } catch (err) {
         console.error('Erro inesperado na autenticação:', err);
@@ -63,21 +92,12 @@ export default function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth Event:', event);
       setSession(session);
       
       if (session?.user) {
-        setUser({ 
-          id: session.user.id, 
-          email: session.user.email || '',
-          nome: session.user.user_metadata?.nome || '',
-          telefone: session.user.user_metadata?.telefone || '',
-          foto_url: session.user.user_metadata?.foto_url || '',
-          referral_code: session.user.user_metadata?.referral_code || '',
-          referred_by: session.user.user_metadata?.referred_by || '',
-          premium_until: session.user.user_metadata?.premium_until || ''
-        });
+        await fetchUserProfile(session.user);
       } else {
         setUser(null);
       }

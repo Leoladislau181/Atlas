@@ -6,6 +6,7 @@ import { Shield, Users, Star, Search, CheckCircle, XCircle, Download, Activity, 
 import { format, addMonths, addYears } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Modal } from '@/components/ui/modal';
+import { supabase } from '@/lib/supabase';
 
 export function Admin() {
   const [users, setUsers] = useState<any[]>([]);
@@ -30,45 +31,25 @@ export function Admin() {
       setLoading(true);
       setError('');
       
-      const timestamp = new Date().getTime();
-      const [usersRes, statsRes] = await Promise.all([
-        fetch(`/api/admin/users?_t=${timestamp}`),
-        fetch(`/api/admin/stats?_t=${timestamp}`)
-      ]);
+      const { data: usersData, error: usersError } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      let usersData, statsData;
-      
-      try {
-        const text = await usersRes.clone().text();
-        try {
-          usersData = JSON.parse(text);
-        } catch (e) {
-          console.error("Users response text:", text);
-          throw new Error('A resposta do servidor para usuários não é um JSON válido. O servidor pode estar reiniciando.');
-        }
-      } catch (e: any) {
-        throw new Error(e.message || 'Erro ao processar resposta de usuários.');
-      }
+      if (usersError) throw usersError;
 
-      try {
-        const text = await statsRes.clone().text();
-        try {
-          statsData = JSON.parse(text);
-        } catch (e) {
-          console.error("Stats response text:", text);
-          throw new Error('A resposta do servidor para estatísticas não é um JSON válido. O servidor pode estar reiniciando.');
-        }
-      } catch (e: any) {
-        throw new Error(e.message || 'Erro ao processar resposta de estatísticas.');
-      }
-      
-      if (!usersRes.ok) throw new Error(usersData.error || 'Erro ao buscar usuários');
-      if (!statsRes.ok) throw new Error(statsData.error || 'Erro ao buscar estatísticas');
-      
-      setUsers(usersData);
-      setGlobalStats(statsData);
+      const { count: totalLancamentos } = await supabase.from('lancamentos').select('*', { count: 'exact', head: true });
+      const { count: totalVeiculos } = await supabase.from('vehicles').select('*', { count: 'exact', head: true });
+      const { count: totalManutencoes } = await supabase.from('manutencoes').select('*', { count: 'exact', head: true });
+
+      setUsers(usersData || []);
+      setGlobalStats({
+        totalLancamentos: totalLancamentos || 0,
+        totalVeiculos: totalVeiculos || 0,
+        totalManutencoes: totalManutencoes || 0
+      });
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Erro ao carregar dados. Verifique se você tem permissão de administrador.');
     } finally {
       setLoading(false);
     }
@@ -81,26 +62,21 @@ export function Admin() {
   const handleGrantPremium = async (months: number) => {
     if (!selectedUser) return;
     try {
-      // If months is 999, it's lifetime (e.g., 100 years)
       const premiumUntil = months === 999 
         ? addYears(new Date(), 100).toISOString() 
         : addMonths(new Date(), months).toISOString();
 
-      const response = await fetch(`/api/admin/users/${selectedUser.id}/premium`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ premium_until: premiumUntil })
-      });
+      const { error } = await supabase
+        .from('profiles')
+        .update({ premium_until: premiumUntil })
+        .eq('id', selectedUser.id);
       
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Erro ao conceder premium');
-      }
+      if (error) throw error;
       
       setIsPremiumModalOpen(false);
       fetchUsersAndStats();
     } catch (err: any) {
-      setAlertMessage(err.message);
+      setAlertMessage(err.message || 'Erro ao conceder premium');
     }
   };
 
@@ -109,20 +85,16 @@ export function Admin() {
       message: 'Tem certeza que deseja remover o acesso Premium deste usuário?',
       onConfirm: async () => {
         try {
-          const response = await fetch(`/api/admin/users/${userId}/premium`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ premium_until: null })
-          });
+          const { error } = await supabase
+            .from('profiles')
+            .update({ premium_until: null })
+            .eq('id', userId);
           
-          if (!response.ok) {
-            const data = await response.json();
-            throw new Error(data.error || 'Erro ao remover premium');
-          }
+          if (error) throw error;
           
           fetchUsersAndStats();
         } catch (err: any) {
-          setAlertMessage(err.message);
+          setAlertMessage(err.message || 'Erro ao remover premium');
         }
       }
     });
@@ -133,15 +105,15 @@ export function Admin() {
     setIsDetailsModalOpen(true);
     setDetailsLoading(true);
     try {
-      const response = await fetch(`/api/admin/users/${user.id}/stats`);
-      let data;
-      try {
-        data = await response.json();
-      } catch (e) {
-        throw new Error('A resposta do servidor não é um JSON válido. O servidor pode estar reiniciando.');
-      }
-      if (!response.ok) throw new Error(data.error);
-      setUserDetails(data);
+      const { count: lancamentosCount } = await supabase.from('lancamentos').select('*', { count: 'exact', head: true }).eq('user_id', user.id);
+      const { count: veiculosCount } = await supabase.from('vehicles').select('*', { count: 'exact', head: true }).eq('user_id', user.id);
+      const { count: manutencoesCount } = await supabase.from('manutencoes').select('*', { count: 'exact', head: true }).eq('user_id', user.id);
+      
+      setUserDetails({
+        lancamentos: lancamentosCount || 0,
+        veiculos: veiculosCount || 0,
+        manutencoes: manutencoesCount || 0
+      });
     } catch (err: any) {
       setAlertMessage('Erro ao carregar detalhes: ' + err.message);
     } finally {
@@ -150,7 +122,7 @@ export function Admin() {
   };
 
   const exportToCSV = () => {
-    const headers = ['ID', 'Nome', 'Email', 'Data de Cadastro', 'Último Acesso', 'Status Premium', 'Premium Até'];
+    const headers = ['ID', 'Nome', 'Email', 'Data de Cadastro', 'Status Premium', 'Premium Até'];
     const csvContent = [
       headers.join(','),
       ...users.map(u => {
@@ -160,7 +132,6 @@ export function Admin() {
           `"${u.nome || ''}"`,
           `"${u.email || ''}"`,
           u.created_at ? format(new Date(u.created_at), 'dd/MM/yyyy HH:mm') : '',
-          u.last_sign_in_at ? format(new Date(u.last_sign_in_at), 'dd/MM/yyyy HH:mm') : '',
           isPremium ? 'Premium' : 'Gratuito',
           isPremium ? format(new Date(u.premium_until), 'dd/MM/yyyy') : ''
         ].join(',');
@@ -297,7 +268,7 @@ export function Admin() {
                     <thead className="text-xs text-gray-500 uppercase bg-gray-50 dark:bg-gray-800/50 dark:text-gray-400">
                       <tr>
                         <th className="px-6 py-3 font-medium">Usuário</th>
-                        <th className="px-6 py-3 font-medium">Último Acesso</th>
+                        <th className="px-6 py-3 font-medium">Data de Cadastro</th>
                         <th className="px-6 py-3 font-medium">Status Premium</th>
                         <th className="px-6 py-3 font-medium text-right">Ações</th>
                       </tr>
@@ -323,7 +294,7 @@ export function Admin() {
                               </div>
                             </td>
                             <td className="px-6 py-4 text-gray-500">
-                              {u.last_sign_in_at ? format(new Date(u.last_sign_in_at), "dd/MM/yyyy HH:mm", { locale: ptBR }) : '-'}
+                              {u.created_at ? format(new Date(u.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR }) : '-'}
                             </td>
                             <td className="px-6 py-4">
                               {isPremium ? (
@@ -439,17 +410,11 @@ export function Admin() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
                   <p className="text-xs text-gray-500 mb-1">Cadastro</p>
                   <p className="text-sm font-medium">
                     {selectedUser.created_at ? format(new Date(selectedUser.created_at), "dd/MM/yyyy") : '-'}
-                  </p>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                  <p className="text-xs text-gray-500 mb-1">Último Acesso</p>
-                  <p className="text-sm font-medium">
-                    {selectedUser.last_sign_in_at ? format(new Date(selectedUser.last_sign_in_at), "dd/MM/yyyy") : '-'}
                   </p>
                 </div>
               </div>
