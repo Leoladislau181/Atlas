@@ -25,23 +25,36 @@ export function Admin() {
       setLoading(true);
       setError('');
       
+      const timestamp = new Date().getTime();
       const [usersRes, statsRes] = await Promise.all([
-        fetch('/api/admin/users'),
-        fetch('/api/admin/stats')
+        fetch(`/api/admin/users?_t=${timestamp}`),
+        fetch(`/api/admin/stats?_t=${timestamp}`)
       ]);
 
       let usersData, statsData;
       
       try {
-        usersData = await usersRes.json();
-      } catch (e) {
-        throw new Error('A resposta do servidor para usuários não é um JSON válido. O servidor pode estar reiniciando.');
+        const text = await usersRes.clone().text();
+        try {
+          usersData = JSON.parse(text);
+        } catch (e) {
+          console.error("Users response text:", text);
+          throw new Error('A resposta do servidor para usuários não é um JSON válido. O servidor pode estar reiniciando.');
+        }
+      } catch (e: any) {
+        throw new Error(e.message || 'Erro ao processar resposta de usuários.');
       }
 
       try {
-        statsData = await statsRes.json();
-      } catch (e) {
-        throw new Error('A resposta do servidor para estatísticas não é um JSON válido. O servidor pode estar reiniciando.');
+        const text = await statsRes.clone().text();
+        try {
+          statsData = JSON.parse(text);
+        } catch (e) {
+          console.error("Stats response text:", text);
+          throw new Error('A resposta do servidor para estatísticas não é um JSON válido. O servidor pode estar reiniciando.');
+        }
+      } catch (e: any) {
+        throw new Error(e.message || 'Erro ao processar resposta de estatísticas.');
       }
       
       if (!usersRes.ok) throw new Error(usersData.error || 'Erro ao buscar usuários');

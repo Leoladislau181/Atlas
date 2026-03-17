@@ -12,7 +12,7 @@ const PORT = 3000;
 app.use(express.json());
 
 // Admin API Routes
-app.get("/api/admin/users", async (req, res) => {
+app.get(["/api/admin/users", "/api/admin/users/"], async (req, res) => {
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -22,14 +22,14 @@ app.get("/api/admin/users", async (req, res) => {
     });
   }
 
-  const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  });
-
   try {
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+
     const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers();
     if (error) throw error;
 
@@ -44,11 +44,11 @@ app.get("/api/admin/users", async (req, res) => {
     res.json(formattedUsers);
   } catch (error: any) {
     console.error("Erro ao buscar usuários:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message || "Erro interno do servidor" });
   }
 });
 
-app.get("/api/admin/stats", async (req, res) => {
+app.get(["/api/admin/stats", "/api/admin/stats/"], async (req, res) => {
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -56,11 +56,11 @@ app.get("/api/admin/stats", async (req, res) => {
     return res.status(500).json({ error: "Configuração ausente." });
   }
 
-  const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false }
-  });
-
   try {
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+
     const { count: totalLancamentos } = await supabaseAdmin.from('lancamentos').select('*', { count: 'exact', head: true });
     const { count: totalVeiculos } = await supabaseAdmin.from('vehicles').select('*', { count: 'exact', head: true });
     const { count: totalManutencoes } = await supabaseAdmin.from('manutencoes').select('*', { count: 'exact', head: true });
@@ -72,7 +72,7 @@ app.get("/api/admin/stats", async (req, res) => {
     });
   } catch (error: any) {
     console.error("Erro ao buscar estatísticas:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message || "Erro interno do servidor" });
   }
 });
 
@@ -85,11 +85,11 @@ app.get("/api/admin/users/:id/stats", async (req, res) => {
     return res.status(500).json({ error: "Configuração ausente." });
   }
 
-  const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false }
-  });
-
   try {
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+
     const { count: totalLancamentos } = await supabaseAdmin.from('lancamentos').select('*', { count: 'exact', head: true }).eq('user_id', id);
     const { count: totalVeiculos } = await supabaseAdmin.from('vehicles').select('*', { count: 'exact', head: true }).eq('user_id', id);
     const { count: totalManutencoes } = await supabaseAdmin.from('manutencoes').select('*', { count: 'exact', head: true }).eq('user_id', id);
@@ -101,7 +101,7 @@ app.get("/api/admin/users/:id/stats", async (req, res) => {
     });
   } catch (error: any) {
     console.error("Erro ao buscar estatísticas do usuário:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message || "Erro interno do servidor" });
   }
 });
 
@@ -116,11 +116,11 @@ app.post("/api/admin/users/:id/premium", async (req, res) => {
     return res.status(500).json({ error: "Configuração ausente." });
   }
 
-  const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false }
-  });
-
   try {
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+
     const { data: user, error: fetchError } = await supabaseAdmin.auth.admin.getUserById(id);
     if (fetchError) throw fetchError;
 
@@ -137,8 +137,13 @@ app.post("/api/admin/users/:id/premium", async (req, res) => {
     res.json({ success: true, user: data.user });
   } catch (error: any) {
     console.error("Erro ao atualizar usuário:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message || "Erro interno do servidor" });
   }
+});
+
+// Catch-all for API routes to prevent Vite from serving HTML for missing API endpoints
+app.use("/api", (req, res) => {
+  res.status(404).json({ error: `API route not found: ${req.method} ${req.originalUrl}` });
 });
 
 async function startServer() {
