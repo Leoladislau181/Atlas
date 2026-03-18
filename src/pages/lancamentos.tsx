@@ -124,45 +124,82 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, 
     }
 
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      console.log('Nenhum arquivo selecionado.');
+      return;
+    }
+
+    console.log('Arquivo selecionado:', file.name, 'Tipo:', file.type, 'Tamanho:', file.size);
 
     setIsReadingReceipt(true);
+    setErrorMsg('');
+    
     try {
       const reader = new FileReader();
-      reader.onloadend = async () => {
-        try {
-          const base64String = (reader.result as string).split(',')[1];
-          const mimeType = file.type;
-          
-          const result = await parseReceiptImage(base64String, mimeType);
-          
-          setTipo('despesa');
-          
-          const fuelCategory = categorias.find(c => c.nome.toLowerCase().includes('combustível') || c.nome.toLowerCase().includes('combustivel'));
-          if (fuelCategory) {
-            setCategoriaId(fuelCategory.id);
-          }
-
-          if (result.valor) setValorStr(formatCurrency(result.valor));
-          if (result.data) setData(result.data);
-          
-          if (result.litros && result.preco_litro) {
-            setFuelPricePerLiterStr(formatCurrency(result.preco_litro));
-          }
-
-          setObservacao('Lançamento via Leitor de Nota Fiscal');
-          setIsFormOpen(true);
-        } catch (error: any) {
-          setErrorMsg('Erro ao ler a nota fiscal: ' + error.message);
-        } finally {
-          setIsReadingReceipt(false);
-          if (fileInputRef.current) fileInputRef.current.value = '';
-        }
+      
+      const readFileAsBase64 = () => {
+        return new Promise<{ base64: string; mimeType: string }>((resolve, reject) => {
+          reader.onload = () => {
+            try {
+              const base64String = (reader.result as string).split(',')[1];
+              resolve({ base64: base64String, mimeType: file.type });
+            } catch (err) {
+              reject(new Error('Erro ao processar o conteúdo do arquivo.'));
+            }
+          };
+          reader.onerror = () => reject(new Error('Erro ao ler o arquivo da imagem.'));
+          reader.readAsDataURL(file);
+        });
       };
-      reader.readAsDataURL(file);
-    } catch (error) {
+
+      const { base64, mimeType } = await readFileAsBase64();
+      
+      console.log('Iniciando leitura da nota fiscal com Gemini...');
+      const result = await parseReceiptImage(base64, mimeType);
+      console.log('Resultado da leitura:', result);
+      
+      if (!result || typeof result !== 'object') {
+        throw new Error('A Inteligência Artificial não retornou um resultado válido.');
+      }
+
+      setTipo('despesa');
+      
+      const fuelCategory = categorias.find(c => 
+        c.nome.toLowerCase().includes('combustível') || 
+        c.nome.toLowerCase().includes('combustivel') ||
+        c.nome.toLowerCase().includes('posto')
+      );
+      
+      if (fuelCategory) {
+        setCategoriaId(fuelCategory.id);
+      }
+
+      if (result.valor) {
+        setValorStr(formatCurrency(result.valor));
+      } else {
+        console.warn('Valor não encontrado na nota.');
+        // Don't throw error, just let user fill manually
+      }
+
+      if (result.data) {
+        setData(result.data);
+      } else {
+        setData(format(new Date(), 'yyyy-MM-dd'));
+      }
+      
+      if (result.litros && result.preco_litro) {
+        setFuelPricePerLiterStr(formatCurrency(result.preco_litro));
+        setOdometer(''); // Reset odometer to force user to fill
+      }
+
+      setObservacao('Lançamento via Leitor de Nota Fiscal');
+      setIsFormOpen(true);
+    } catch (error: any) {
+      console.error('Erro ao processar imagem da nota:', error);
+      setErrorMsg('Erro ao ler a nota fiscal: ' + (error.message || 'Erro desconhecido'));
+    } finally {
       setIsReadingReceipt(false);
-      setErrorMsg('Erro ao processar imagem.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -402,10 +439,10 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, 
           <input
             type="file"
             accept="image/*"
-            capture="environment"
             ref={fileInputRef}
             onChange={handleReceiptUpload}
             className="hidden"
+            id="receipt-upload-input"
           />
           <Button
             variant="outline"

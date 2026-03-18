@@ -13,7 +13,9 @@ const Relatorios = React.lazy(() => import('@/pages/relatorios').then(m => ({ de
 const Configuracoes = React.lazy(() => import('@/pages/configuracoes').then(m => ({ default: m.Configuracoes })));
 const Veiculos = React.lazy(() => import('@/pages/veiculos').then(m => ({ default: m.Veiculos })));
 const Premium = React.lazy(() => import('@/pages/premium').then(m => ({ default: m.Premium })));
+const Admin = React.lazy(() => import('@/pages/admin').then(m => ({ default: m.Admin })));
 import { PremiumModal } from '@/components/premium-modal';
+import { ErrorBoundary } from '@/components/error-boundary';
 
 export default function App() {
   const [session, setSession] = useState<any>(null);
@@ -23,6 +25,44 @@ export default function App() {
   const [premiumFeatureName, setPremiumFeatureName] = useState('');
 
   useEffect(() => {
+    const fetchUserProfile = async (sessionUser: any) => {
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', sessionUser.id)
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('Erro ao buscar perfil:', error);
+        }
+
+        setUser({ 
+          id: sessionUser.id, 
+          email: sessionUser.email || '',
+          nome: profile?.nome || sessionUser.user_metadata?.nome || '',
+          telefone: profile?.telefone || sessionUser.user_metadata?.telefone || '',
+          foto_url: profile?.foto_url || sessionUser.user_metadata?.foto_url || '',
+          referral_code: profile?.referral_code || sessionUser.user_metadata?.referral_code || '',
+          referred_by: profile?.referred_by || sessionUser.user_metadata?.referred_by || '',
+          premium_until: profile?.premium_until || sessionUser.user_metadata?.premium_until || ''
+        });
+      } catch (err) {
+        console.error('Erro ao buscar perfil:', err);
+        // Fallback to metadata
+        setUser({ 
+          id: sessionUser.id, 
+          email: sessionUser.email || '',
+          nome: sessionUser.user_metadata?.nome || '',
+          telefone: sessionUser.user_metadata?.telefone || '',
+          foto_url: sessionUser.user_metadata?.foto_url || '',
+          referral_code: sessionUser.user_metadata?.referral_code || '',
+          referred_by: sessionUser.user_metadata?.referred_by || '',
+          premium_until: sessionUser.user_metadata?.premium_until || ''
+        });
+      }
+    };
+
     const initializeAuth = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
@@ -40,16 +80,7 @@ export default function App() {
 
         setSession(session);
         if (session?.user) {
-          setUser({ 
-            id: session.user.id, 
-            email: session.user.email || '',
-            nome: session.user.user_metadata?.nome || '',
-            telefone: session.user.user_metadata?.telefone || '',
-            foto_url: session.user.user_metadata?.foto_url || '',
-            referral_code: session.user.user_metadata?.referral_code || '',
-            referred_by: session.user.user_metadata?.referred_by || '',
-            premium_until: session.user.user_metadata?.premium_until || ''
-          });
+          await fetchUserProfile(session.user);
         }
       } catch (err) {
         console.error('Erro inesperado na autenticação:', err);
@@ -62,21 +93,12 @@ export default function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth Event:', event);
       setSession(session);
       
       if (session?.user) {
-        setUser({ 
-          id: session.user.id, 
-          email: session.user.email || '',
-          nome: session.user.user_metadata?.nome || '',
-          telefone: session.user.user_metadata?.telefone || '',
-          foto_url: session.user.user_metadata?.foto_url || '',
-          referral_code: session.user.user_metadata?.referral_code || '',
-          referred_by: session.user.user_metadata?.referred_by || '',
-          premium_until: session.user.user_metadata?.premium_until || ''
-        });
+        await fetchUserProfile(session.user);
       } else {
         setUser(null);
       }
@@ -110,18 +132,38 @@ export default function App() {
 
   return (
     <ThemeProvider defaultTheme="system" storageKey="atlas-theme">
-      <MainApp user={user} activeTab={activeTab} setActiveTab={setActiveTab} />
+      <ErrorBoundary>
+        <MainApp user={user} activeTab={activeTab} setActiveTab={setActiveTab} />
+      </ErrorBoundary>
     </ThemeProvider>
   );
 }
 
 function MainApp({ user, activeTab, setActiveTab }: { user: User; activeTab: string; setActiveTab: (tab: string) => void }) {
-  const { categorias, lancamentos, vehicles, manutencoes, loading, refetch } = useFinanceData();
+  const { categorias, lancamentos, vehicles, manutencoes, loading, error, refetch } = useFinanceData();
   const [isNewLancamentoOpen, setIsNewLancamentoOpen] = useState(false);
   const [forceOpenProfile, setForceOpenProfile] = useState(false);
   const [forceOpenReceiptReader, setForceOpenReceiptReader] = useState(false);
   const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
   const [premiumFeatureName, setPremiumFeatureName] = useState('');
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F9FAFB] dark:bg-gray-950 p-4">
+        <div className="bg-white dark:bg-gray-900 p-6 rounded-xl shadow-lg max-w-md w-full text-center border border-red-100 dark:border-red-900">
+          <div className="text-red-500 mb-4 text-4xl">⚠️</div>
+          <h2 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">Erro ao carregar dados</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">{error}</p>
+          <button 
+            onClick={refetch}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+          >
+            Tentar Novamente
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -224,6 +266,9 @@ function MainApp({ user, activeTab, setActiveTab }: { user: User; activeTab: str
             user={user}
           />
         )}
+        {activeTab === 'admin' && user.email === 'leoladislau181@gmail.com' && (
+          <Admin />
+        )}
         {activeTab === 'premium' && (
           <Premium user={user} refetch={refetch} />
         )}
@@ -235,6 +280,7 @@ function MainApp({ user, activeTab, setActiveTab }: { user: User; activeTab: str
             onNavigateToRelatorios={() => setActiveTab('relatorios')}
             onNavigateToPremium={() => setActiveTab('premium')}
             onNavigateToVeiculos={() => setActiveTab('veiculos')}
+            onNavigateToAdmin={() => setActiveTab('admin')}
             forceOpenProfile={forceOpenProfile}
             onProfileOpened={() => setForceOpenProfile(false)}
           />

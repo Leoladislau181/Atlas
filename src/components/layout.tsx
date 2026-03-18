@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { LogOut, Home, List, BarChart2, Car, Settings, User as UserIcon, Plus, Star, Menu } from 'lucide-react';
+import { LogOut, Home, List, BarChart2, Car, Settings, User as UserIcon, Plus, Star, Menu, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { User } from '@/types';
@@ -29,6 +29,10 @@ export function Layout({ children, activeTab, setActiveTab, onNewLancamento, onP
       : { id: 'premium', label: 'Premium', icon: Star },
     { id: 'configuracoes', label: 'Mais', icon: Menu },
   ];
+
+  if (user?.email === 'leoladislau181@gmail.com') {
+    tabs.splice(3, 0, { id: 'admin', label: 'Admin', icon: Shield });
+  }
 
   const handleLogout = async () => {
     await supabase.auth.signOut();

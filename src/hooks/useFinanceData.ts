@@ -11,9 +11,11 @@ export function useFinanceData() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [manutencoes, setManutencoes] = useState<Manutencao[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const [userResult, catResult, vehResult, manResult, lanResult] = await Promise.all([
         supabase.auth.getUser(),
@@ -75,8 +77,9 @@ export function useFinanceData() {
       const lanError = lanResult.error;
       if (lanError) throw lanError;
       setLancamentos(lanResult.data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching data:', error);
+      setError(error.message || 'Erro ao carregar dados do banco de dados.');
     } finally {
       setLoading(false);
     }
@@ -86,5 +89,5 @@ export function useFinanceData() {
     fetchData();
   }, []);
 
-  return { categorias, lancamentos, vehicles, manutencoes, loading, refetch: fetchData };
+  return { categorias, lancamentos, vehicles, manutencoes, loading, error, refetch: fetchData };
 }
