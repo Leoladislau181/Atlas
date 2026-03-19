@@ -133,9 +133,14 @@ export function Veiculos({ vehicles, lancamentos, manutencoes, refetch, user }: 
         if (error) throw error;
 
         if (type === 'rented') {
-          const { data: catData } = await supabase.from('categorias').select('id').eq('nome', 'Aluguel').single();
+          const { data: catData } = await supabase
+            .from('categorias')
+            .select('id')
+            .eq('nome', 'Aluguel')
+            .eq('user_id', user.id)
+            .maybeSingle();
           if (catData) {
-            await supabase.from('lancamentos').insert([{
+            const { error: lancError } = await supabase.from('lancamentos').insert([{
               user_id: user.id,
               tipo: 'despesa',
               categoria_id: catData.id,
@@ -144,6 +149,7 @@ export function Veiculos({ vehicles, lancamentos, manutencoes, refetch, user }: 
               data: contractStartDate || new Date().toISOString().split('T')[0],
               observacao: `Pagamento inicial do contrato - ${name}`
             }]);
+            if (lancError) throw lancError;
           }
         }
       }
@@ -250,9 +256,14 @@ export function Veiculos({ vehicles, lancamentos, manutencoes, refetch, user }: 
       const { error } = await supabase.from('vehicles').update(payload).eq('id', renewingVehicle.id);
       if (error) throw error;
 
-      const { data: catData } = await supabase.from('categorias').select('id').eq('nome', 'Aluguel').single();
+      const { data: catData } = await supabase
+        .from('categorias')
+        .select('id')
+        .eq('nome', 'Aluguel')
+        .eq('user_id', user.id)
+        .maybeSingle();
       if (catData) {
-        await supabase.from('lancamentos').insert([{
+        const { error: lancError } = await supabase.from('lancamentos').insert([{
           user_id: user.id,
           tipo: 'despesa',
           categoria_id: catData.id,
@@ -261,6 +272,7 @@ export function Veiculos({ vehicles, lancamentos, manutencoes, refetch, user }: 
           data: renewStartDate || new Date().toISOString().split('T')[0],
           observacao: `Pagamento de renovação de contrato - ${renewingVehicle.name}`
         }]);
+        if (lancError) throw lancError;
       }
 
       setRenewModalOpen(false);
