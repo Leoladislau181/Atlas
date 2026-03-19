@@ -1,5 +1,5 @@
 import React, { useState, useEffect, Suspense } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { User } from '@/types';
 import { isPremium } from '@/lib/utils';
 import { Auth } from '@/pages/auth';
@@ -13,9 +13,61 @@ const Relatorios = React.lazy(() => import('@/pages/relatorios').then(m => ({ de
 const Configuracoes = React.lazy(() => import('@/pages/configuracoes').then(m => ({ default: m.Configuracoes })));
 const Veiculos = React.lazy(() => import('@/pages/veiculos').then(m => ({ default: m.Veiculos })));
 const Premium = React.lazy(() => import('@/pages/premium').then(m => ({ default: m.Premium })));
-const Admin = React.lazy(() => import('@/pages/admin').then(m => ({ default: m.Admin })));
 import { PremiumModal } from '@/components/premium-modal';
-import { ErrorBoundary } from '@/components/error-boundary';
+
+function SupabaseSetupScreen() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-950 p-4 font-sans transition-colors duration-200">
+      <div className="w-full max-w-md space-y-8 text-center">
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-white shadow-xl mb-8 overflow-hidden">
+          <img 
+            src="/logo.svg" 
+            alt="Atlas Logo" 
+            className="h-full w-full object-cover"
+            referrerPolicy="no-referrer"
+          />
+        </div>
+        <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+          Configuração Necessária
+        </h2>
+        <div className="bg-white dark:bg-gray-900 p-8 rounded-3xl shadow-xl space-y-6 text-left border border-gray-100 dark:border-gray-800">
+          <p className="text-gray-600 dark:text-gray-400">
+            Para o <strong>Atlas Financeiro</strong> funcionar, você precisa conectar seu projeto Supabase:
+          </p>
+          
+          <div className="space-y-4">
+            <div className="flex gap-3">
+              <div className="flex-shrink-0 flex h-6 w-6 items-center justify-center rounded-full bg-[#F59E0B] text-white text-xs font-bold">1</div>
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                Crie um projeto no <a href="https://supabase.com" target="_blank" rel="noopener noreferrer" className="text-[#F59E0B] hover:underline font-semibold">Supabase</a>.
+              </p>
+            </div>
+            
+            <div className="flex gap-3">
+              <div className="flex-shrink-0 flex h-6 w-6 items-center justify-center rounded-full bg-[#F59E0B] text-white text-xs font-bold">2</div>
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                Vá em <strong>Project Settings</strong> → <strong>API</strong> e copie o <strong>Project URL</strong> e a <strong>anon public key</strong>.
+              </p>
+            </div>
+            
+            <div className="flex gap-3">
+              <div className="flex-shrink-0 flex h-6 w-6 items-center justify-center rounded-full bg-[#F59E0B] text-white text-xs font-bold">3</div>
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                No AI Studio, abra <strong>Settings</strong> (⚙️) → <strong>Secrets</strong> e adicione:
+                <code className="block mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono break-all">VITE_SUPABASE_URL</code>
+                <code className="block mt-1 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono break-all">VITE_SUPABASE_ANON_KEY</code>
+              </p>
+            </div>
+          </div>
+          
+          <p className="text-xs text-gray-500 dark:text-gray-500 italic">
+            O aplicativo será reiniciado automaticamente após você salvar as chaves.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   const [session, setSession] = useState<any>(null);
@@ -25,43 +77,7 @@ export default function App() {
   const [premiumFeatureName, setPremiumFeatureName] = useState('');
 
   useEffect(() => {
-    const fetchUserProfile = async (sessionUser: any) => {
-      try {
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', sessionUser.id)
-          .single();
-
-        if (error && error.code !== 'PGRST116') {
-          console.error('Erro ao buscar perfil:', error);
-        }
-
-        setUser({ 
-          id: sessionUser.id, 
-          email: sessionUser.email || '',
-          nome: profile?.nome || sessionUser.user_metadata?.nome || '',
-          telefone: profile?.telefone || sessionUser.user_metadata?.telefone || '',
-          foto_url: profile?.foto_url || sessionUser.user_metadata?.foto_url || '',
-          referral_code: profile?.referral_code || sessionUser.user_metadata?.referral_code || '',
-          referred_by: profile?.referred_by || sessionUser.user_metadata?.referred_by || '',
-          premium_until: profile?.premium_until || sessionUser.user_metadata?.premium_until || ''
-        });
-      } catch (err) {
-        console.error('Erro ao buscar perfil:', err);
-        // Fallback to metadata
-        setUser({ 
-          id: sessionUser.id, 
-          email: sessionUser.email || '',
-          nome: sessionUser.user_metadata?.nome || '',
-          telefone: sessionUser.user_metadata?.telefone || '',
-          foto_url: sessionUser.user_metadata?.foto_url || '',
-          referral_code: sessionUser.user_metadata?.referral_code || '',
-          referred_by: sessionUser.user_metadata?.referred_by || '',
-          premium_until: sessionUser.user_metadata?.premium_until || ''
-        });
-      }
-    };
+    if (!isSupabaseConfigured) return;
 
     const initializeAuth = async () => {
       try {
@@ -80,7 +96,16 @@ export default function App() {
 
         setSession(session);
         if (session?.user) {
-          await fetchUserProfile(session.user);
+          setUser({ 
+            id: session.user.id, 
+            email: session.user.email || '',
+            nome: session.user.user_metadata?.nome || '',
+            telefone: session.user.user_metadata?.telefone || '',
+            foto_url: session.user.user_metadata?.foto_url || '',
+            referral_code: session.user.user_metadata?.referral_code || '',
+            referred_by: session.user.user_metadata?.referred_by || '',
+            premium_until: session.user.user_metadata?.premium_until || ''
+          });
         }
       } catch (err) {
         console.error('Erro inesperado na autenticação:', err);
@@ -93,12 +118,21 @@ export default function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('Auth Event:', event);
       setSession(session);
       
       if (session?.user) {
-        await fetchUserProfile(session.user);
+        setUser({ 
+          id: session.user.id, 
+          email: session.user.email || '',
+          nome: session.user.user_metadata?.nome || '',
+          telefone: session.user.user_metadata?.telefone || '',
+          foto_url: session.user.user_metadata?.foto_url || '',
+          referral_code: session.user.user_metadata?.referral_code || '',
+          referred_by: session.user.user_metadata?.referred_by || '',
+          premium_until: session.user.user_metadata?.premium_until || ''
+        });
       } else {
         setUser(null);
       }
@@ -126,44 +160,28 @@ export default function App() {
     }
   }, [user?.foto_url]);
 
+  if (!isSupabaseConfigured) {
+    return <SupabaseSetupScreen />;
+  }
+
   if (!session || !user) {
     return <Auth />;
   }
 
   return (
     <ThemeProvider defaultTheme="system" storageKey="atlas-theme">
-      <ErrorBoundary>
-        <MainApp user={user} activeTab={activeTab} setActiveTab={setActiveTab} />
-      </ErrorBoundary>
+      <MainApp user={user} activeTab={activeTab} setActiveTab={setActiveTab} />
     </ThemeProvider>
   );
 }
 
 function MainApp({ user, activeTab, setActiveTab }: { user: User; activeTab: string; setActiveTab: (tab: string) => void }) {
-  const { categorias, lancamentos, vehicles, manutencoes, loading, error, refetch } = useFinanceData();
+  const { categorias, lancamentos, vehicles, manutencoes, loading, refetch } = useFinanceData();
   const [isNewLancamentoOpen, setIsNewLancamentoOpen] = useState(false);
   const [forceOpenProfile, setForceOpenProfile] = useState(false);
   const [forceOpenReceiptReader, setForceOpenReceiptReader] = useState(false);
   const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
   const [premiumFeatureName, setPremiumFeatureName] = useState('');
-
-  if (error) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F9FAFB] dark:bg-gray-950 p-4">
-        <div className="bg-white dark:bg-gray-900 p-6 rounded-xl shadow-lg max-w-md w-full text-center border border-red-100 dark:border-red-900">
-          <div className="text-red-500 mb-4 text-4xl">⚠️</div>
-          <h2 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">Erro ao carregar dados</h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">{error}</p>
-          <button 
-            onClick={refetch}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-          >
-            Tentar Novamente
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   if (loading) {
     return (
@@ -266,9 +284,6 @@ function MainApp({ user, activeTab, setActiveTab }: { user: User; activeTab: str
             user={user}
           />
         )}
-        {activeTab === 'admin' && user.email === 'leoladislau181@gmail.com' && (
-          <Admin />
-        )}
         {activeTab === 'premium' && (
           <Premium user={user} refetch={refetch} />
         )}
@@ -280,7 +295,6 @@ function MainApp({ user, activeTab, setActiveTab }: { user: User; activeTab: str
             onNavigateToRelatorios={() => setActiveTab('relatorios')}
             onNavigateToPremium={() => setActiveTab('premium')}
             onNavigateToVeiculos={() => setActiveTab('veiculos')}
-            onNavigateToAdmin={() => setActiveTab('admin')}
             forceOpenProfile={forceOpenProfile}
             onProfileOpened={() => setForceOpenProfile(false)}
           />

@@ -43,16 +43,15 @@ export function Auth() {
         setSuccess('Conta criada com sucesso! Verifique seu email ou faça login.');
         setIsSignUp(false);
       } else {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        if (data.session) {
-          window.location.reload();
-        } else {
-          throw new Error('Sessão não iniciada. Verifique seu email ou tente novamente.');
-        }
       }
     } catch (err: any) {
-      setError(err.message || 'Ocorreu um erro.');
+      if (err.message === 'Failed to fetch') {
+        setError('Erro de conexão. Verifique se as chaves do Supabase estão corretas nas configurações.');
+      } else {
+        setError(err.message || 'Ocorreu um erro.');
+      }
     } finally {
       setLoading(false);
     }
