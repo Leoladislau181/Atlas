@@ -28,7 +28,11 @@
     "observacao",
     "genai",
     "jspdf",
-    "autotable"
+    "autotable",
+    "policyname",
+    "Proprio",
+    "Atualizacao",
+    "apikey"
   ],
   "ignorePaths": [
     "node_modules",

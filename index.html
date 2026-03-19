@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#111827" media="(prefers-color-scheme: dark)" />
+    <!-- <meta name="theme-color" content="#111827" media="(prefers-color-scheme: dark)" /> -->
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Atlas" />
@@ -11,10 +11,27 @@
     <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <link rel="apple-touch-icon" href="/logo.svg" />
     <title>Atlas Financeiro</title>
+    <style>
+      #debug-error-box {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: red;
+        color: white;
+        padding: 20px;
+        z-index: 999999;
+        font-family: monospace;
+        white-space: pre-wrap;
+        max-height: 50vh;
+        overflow-y: auto;
+      }
+    </style>
   </head>
   <body>
     <!-- DEBUG ERROR CATCHER -->
-    <div id="debug-error-box" style="display: none; position: fixed; top: 0; left: 0; right: 0; background: red; color: white; padding: 20px; z-index: 999999; font-family: monospace; white-space: pre-wrap; max-height: 50vh; overflow-y: auto;"></div>
+    <div id="debug-error-box"></div>
     <script>
       window.onerror = function(message, source, lineno, colno, error) {
         var box = document.getElementById('debug-error-box');
