@@ -1,5 +1,5 @@
 {
   "name": "Atlas Financeiro",
   "description": "Sistema de Gestão Financeira e de Frota com Relatórios Avançados (PDF, Excel, CSV)",
-  "requestFramePermissions": ["camera"]
+  "requestFramePermissions": []
 }
