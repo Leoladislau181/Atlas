@@ -12,3 +12,12 @@
     @apply bg-gray-50 text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100 transition-colors duration-200;
   }
 }
+
+/* Hidden container used to render charts off-screen for PDF export */
+.pdf-chart-offscreen {
+  position: absolute;
+  top: -9999px;
+  left: -9999px;
+  width: 800px;
+  height: 400px;
+}

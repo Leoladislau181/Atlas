@@ -301,7 +301,9 @@ function MainApp({ user, activeTab, setActiveTab }: { user: User; activeTab: str
           <Relatorios 
             lancamentos={lancamentos} 
             vehicles={vehicles} 
-            user={user} 
+            user={user}
+            categorias={categorias}
+            refetch={refetch}
           />
         )}
         {activeTab === 'veiculos' && (

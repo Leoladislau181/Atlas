@@ -32,7 +32,20 @@
     "policyname",
     "Proprio",
     "Atualizacao",
-    "apikey"
+    "apikey",
+    "gemini",
+    "Gemini",
+    "descricao",
+    "Descricao",
+    "defval",
+    "Combustivel",
+    "combustivel",
+    "onclone",
+    "halign",
+    "relatorio",
+    "preco",
+    "Preco",
+    "tailwindcss"
   ],
   "ignorePaths": [
     "node_modules",
