@@ -43,6 +43,15 @@ export function Dashboard({ lancamentos, categorias, vehicles, manutencoes, refe
   const [quickVehicleId, setQuickVehicleId] = useState('');
   const [quickLoading, setQuickLoading] = useState(false);
 
+  // Auto-fill states for Quick Refuel
+  const [isQuickOdometerManuallyEdited, setIsQuickOdometerManuallyEdited] = useState(false);
+  const [lastQuickAutoFillTrigger, setLastQuickAutoFillTrigger] = useState('');
+  const [lastQuickFuelData, setLastQuickFuelData] = useState<{
+    pricePerLiter: number | null;
+    lastOdometer: number | null;
+    avgConsumption: number | null;
+  } | null>(null);
+
   const [performModalOpen, setPerformModalOpen] = useState(false);
   const [performManutencao, setPerformManutencao] = useState<Manutencao | null>(null);
   const [performVehicle, setPerformVehicle] = useState<Vehicle | null>(null);
@@ -65,6 +74,78 @@ export function Dashboard({ lancamentos, categorias, vehicles, manutencoes, refe
       setMonthsFilter(3);
     }
   }, []);
+
+  useEffect(() => {
+    const triggerKey = `${quickVehicleId}`;
+
+    if (quickEntryOpen && quickVehicleId) {
+      const vLancamentos = lancamentos.filter(l => l.vehicle_id === quickVehicleId);
+      
+      const fuelEntries = vLancamentos
+        .filter(l => l.fuel_price_per_liter && l.fuel_liters && l.odometer)
+        .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+
+      const lastFuelEntry = fuelEntries.length > 0 ? fuelEntries[0] : null;
+      const lastPrice = lastFuelEntry?.fuel_price_per_liter || null;
+      
+      const odoEntries = vLancamentos
+        .filter(l => l.odometer)
+        .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+      
+      const vehicle = vehicles.find(v => v.id === quickVehicleId);
+      const lastOdo = odoEntries.length > 0 ? odoEntries[0].odometer! : (vehicle?.initial_odometer || null);
+
+      let totalLitros = 0;
+      let maxFuelOdometer = vehicle?.initial_odometer || 0;
+      
+      vLancamentos.forEach(l => {
+        if (l.tipo === 'despesa' && l.fuel_liters && l.fuel_liters > 0) {
+          totalLitros += Number(l.fuel_liters);
+          if (l.odometer && l.odometer > maxFuelOdometer) {
+            maxFuelOdometer = l.odometer;
+          }
+        }
+      });
+      
+      const kmRodadoCombustivel = maxFuelOdometer - (vehicle?.initial_odometer || 0);
+      const avgConsumption = totalLitros > 0 ? (kmRodadoCombustivel / totalLitros) : null;
+
+      setLastQuickFuelData({
+        pricePerLiter: lastPrice,
+        lastOdometer: lastOdo,
+        avgConsumption: avgConsumption
+      });
+
+      if (triggerKey !== lastQuickAutoFillTrigger) {
+        if (lastPrice) {
+          setQuickPricePerLiterStr(formatCurrency(lastPrice));
+        }
+        setIsQuickOdometerManuallyEdited(false);
+        setLastQuickAutoFillTrigger(triggerKey);
+      }
+    } else if (!quickVehicleId) {
+      setLastQuickFuelData(null);
+      setIsQuickOdometerManuallyEdited(false);
+      setLastQuickAutoFillTrigger(triggerKey);
+    }
+  }, [quickVehicleId, quickEntryOpen, lancamentos, vehicles, lastQuickAutoFillTrigger]);
+
+  useEffect(() => {
+    if (quickEntryOpen && quickVehicleId && !isQuickOdometerManuallyEdited && lastQuickFuelData) {
+      const valorNum = parseCurrency(quickValueStr);
+      const pricePerLiter = parseCurrency(quickPricePerLiterStr);
+      
+      if (valorNum > 0 && pricePerLiter > 0 && lastQuickFuelData.lastOdometer !== null && lastQuickFuelData.avgConsumption !== null && lastQuickFuelData.avgConsumption > 0) {
+        const liters = valorNum / pricePerLiter;
+        const expectedKm = liters * lastQuickFuelData.avgConsumption;
+        const expectedOdometer = Math.round(lastQuickFuelData.lastOdometer + expectedKm);
+        
+        setQuickKM(expectedOdometer.toString());
+      } else if (valorNum === 0 || pricePerLiter === 0) {
+        setQuickKM('');
+      }
+    }
+  }, [quickValueStr, quickPricePerLiterStr, lastQuickFuelData, isQuickOdometerManuallyEdited, quickEntryOpen, quickVehicleId]);
 
   const stats = useMemo(() => {
     let receitasMes = 0;
@@ -300,7 +381,11 @@ export function Dashboard({ lancamentos, categorias, vehicles, manutencoes, refe
             <span className="sm:hidden">Nota</span>
           </Button>
           <Button 
-            onClick={() => setQuickEntryOpen(true)}
+            onClick={() => {
+              setQuickEntryOpen(true);
+              setIsQuickOdometerManuallyEdited(false);
+              setLastQuickAutoFillTrigger('');
+            }}
             className="bg-[#F59E0B] hover:bg-[#D97706] text-white shadow-sm gap-2"
           >
             <Fuel className="h-4 w-4" />
@@ -512,7 +597,10 @@ export function Dashboard({ lancamentos, categorias, vehicles, manutencoes, refe
               type="number"
               inputMode="numeric"
               value={quickKM}
-              onChange={(e) => setQuickKM(e.target.value)}
+              onChange={(e) => {
+                setQuickKM(e.target.value);
+                setIsQuickOdometerManuallyEdited(true);
+              }}
               placeholder="0"
               required
             />

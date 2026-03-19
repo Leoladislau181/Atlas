@@ -19,6 +19,7 @@ interface ConfiguracoesProps {
   onNavigateToRelatorios?: () => void;
   onNavigateToPremium?: () => void;
   onNavigateToVeiculos?: () => void;
+  onNavigateToAdmin?: () => void;
   forceOpenProfile?: boolean;
   onProfileOpened?: () => void;
 }
@@ -30,6 +31,7 @@ export function Configuracoes({
   onNavigateToRelatorios, 
   onNavigateToPremium, 
   onNavigateToVeiculos, 
+  onNavigateToAdmin,
   forceOpenProfile, 
   onProfileOpened 
 }: ConfiguracoesProps) {
@@ -529,6 +531,28 @@ export function Configuracoes({
                 </div>
               </div>
               <Button variant="ghost" size="sm" className="text-gray-400 dark:text-gray-500">
+                <ChevronDown className="h-5 w-5 -rotate-90" />
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {user.email === 'leoladislau181@gmail.com' && onNavigateToAdmin && (
+          <Card className="border-none shadow-sm bg-indigo-50 dark:bg-indigo-900/10 overflow-hidden border border-indigo-100 dark:border-indigo-900/30">
+            <div 
+              className="p-4 flex items-center justify-between cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/20 transition-colors"
+              onClick={onNavigateToAdmin}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+                  <Shield className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-indigo-900 dark:text-indigo-100">Painel Administrativo</h3>
+                  <p className="text-xs text-indigo-700 dark:text-indigo-300">Acesso exclusivo para gerenciamento</p>
+                </div>
+              </div>
+              <Button variant="ghost" size="sm" className="text-indigo-400 dark:text-indigo-500">
                 <ChevronDown className="h-5 w-5 -rotate-90" />
               </Button>
             </div>

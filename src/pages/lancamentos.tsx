@@ -44,6 +44,15 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, 
   const [odometer, setOdometer] = useState('');
   const [fuelPricePerLiterStr, setFuelPricePerLiterStr] = useState('');
 
+  // Auto-fill states
+  const [isOdometerManuallyEdited, setIsOdometerManuallyEdited] = useState(false);
+  const [lastAutoFillTrigger, setLastAutoFillTrigger] = useState('');
+  const [lastFuelData, setLastFuelData] = useState<{
+    pricePerLiter: number | null;
+    lastOdometer: number | null;
+    avgConsumption: number | null;
+  } | null>(null);
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [visibleCount, setVisibleCount] = useState(20);
@@ -141,6 +150,15 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, 
           const fuelCategory = categorias.find(c => c.nome.toLowerCase().includes('combustível') || c.nome.toLowerCase().includes('combustivel'));
           if (fuelCategory) {
             setCategoriaId(fuelCategory.id);
+            const activeVehicle = vehicles.find(v => v.status === 'active') || vehicles[0];
+            if (activeVehicle) {
+              setVehicleId(activeVehicle.id);
+              if (result.litros && result.preco_litro) {
+                setLastAutoFillTrigger(`${activeVehicle.id}-${fuelCategory.id}`);
+              } else {
+                setLastAutoFillTrigger('');
+              }
+            }
           }
 
           if (result.valor) setValorStr(formatCurrency(result.valor));
@@ -150,6 +168,7 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, 
             setFuelPricePerLiterStr(formatCurrency(result.preco_litro));
           }
 
+          setIsOdometerManuallyEdited(false);
           setObservacao('Lançamento via Leitor de Nota Fiscal');
           setIsFormOpen(true);
         } catch (error: any) {
@@ -170,6 +189,87 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, 
     const cat = categorias.find(c => c.id === categoriaId);
     return cat?.nome.toLowerCase().includes('combustível') || cat?.nome.toLowerCase().includes('combustivel');
   };
+
+  useEffect(() => {
+    const triggerKey = `${vehicleId}-${categoriaId}`;
+    const isCombustivelCat = () => {
+      const cat = categorias.find(c => c.id === categoriaId);
+      return cat?.nome.toLowerCase().includes('combustível') || cat?.nome.toLowerCase().includes('combustivel');
+    };
+
+    if (!editingId && useVehicle && tipo === 'despesa' && isCombustivelCat()) {
+      const vLancamentos = lancamentos.filter(l => l.vehicle_id === vehicleId);
+      
+      const fuelEntries = vLancamentos
+        .filter(l => l.fuel_price_per_liter && l.fuel_liters && l.odometer)
+        .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+
+      const lastFuelEntry = fuelEntries.length > 0 ? fuelEntries[0] : null;
+      const lastPrice = lastFuelEntry?.fuel_price_per_liter || null;
+      
+      const odoEntries = vLancamentos
+        .filter(l => l.odometer)
+        .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+      
+      const vehicle = vehicles.find(v => v.id === vehicleId);
+      const lastOdo = odoEntries.length > 0 ? odoEntries[0].odometer! : (vehicle?.initial_odometer || null);
+
+      let totalLitros = 0;
+      let maxFuelOdometer = vehicle?.initial_odometer || 0;
+      
+      vLancamentos.forEach(l => {
+        if (l.tipo === 'despesa' && l.fuel_liters && l.fuel_liters > 0) {
+          totalLitros += Number(l.fuel_liters);
+          if (l.odometer && l.odometer > maxFuelOdometer) {
+            maxFuelOdometer = l.odometer;
+          }
+        }
+      });
+      
+      const kmRodadoCombustivel = maxFuelOdometer - (vehicle?.initial_odometer || 0);
+      const avgConsumption = totalLitros > 0 ? (kmRodadoCombustivel / totalLitros) : null;
+
+      setLastFuelData({
+        pricePerLiter: lastPrice,
+        lastOdometer: lastOdo,
+        avgConsumption: avgConsumption
+      });
+
+      if (triggerKey !== lastAutoFillTrigger) {
+        if (lastPrice) {
+          setFuelPricePerLiterStr(formatCurrency(lastPrice));
+        }
+        setIsOdometerManuallyEdited(false);
+        setLastAutoFillTrigger(triggerKey);
+      }
+    } else if (!useVehicle || !isCombustivelCat()) {
+      setLastFuelData(null);
+      setIsOdometerManuallyEdited(false);
+      setLastAutoFillTrigger(triggerKey);
+    }
+  }, [vehicleId, categoriaId, tipo, useVehicle, editingId, lancamentos, vehicles, lastAutoFillTrigger, categorias]);
+
+  useEffect(() => {
+    const isCombustivelCat = () => {
+      const cat = categorias.find(c => c.id === categoriaId);
+      return cat?.nome.toLowerCase().includes('combustível') || cat?.nome.toLowerCase().includes('combustivel');
+    };
+
+    if (!editingId && useVehicle && tipo === 'despesa' && isCombustivelCat() && !isOdometerManuallyEdited && lastFuelData) {
+      const valorNum = parseCurrency(valorStr);
+      const pricePerLiter = parseCurrency(fuelPricePerLiterStr);
+      
+      if (valorNum > 0 && pricePerLiter > 0 && lastFuelData.lastOdometer !== null && lastFuelData.avgConsumption !== null && lastFuelData.avgConsumption > 0) {
+        const liters = valorNum / pricePerLiter;
+        const expectedKm = liters * lastFuelData.avgConsumption;
+        const expectedOdometer = Math.round(lastFuelData.lastOdometer + expectedKm);
+        
+        setOdometer(expectedOdometer.toString());
+      } else if (valorNum === 0 || pricePerLiter === 0) {
+        setOdometer('');
+      }
+    }
+  }, [valorStr, fuelPricePerLiterStr, lastFuelData, isOdometerManuallyEdited, editingId, useVehicle, tipo, categoriaId, categorias]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -632,7 +732,10 @@ export function Lancamentos({ categorias, lancamentos, vehicles, refetch, user, 
                       inputMode="numeric"
                       placeholder="Ex: 50100"
                       value={odometer}
-                      onChange={(e) => setOdometer(e.target.value)}
+                      onChange={(e) => {
+                        setOdometer(e.target.value);
+                        setIsOdometerManuallyEdited(true);
+                      }}
                       required={useVehicle && tipo === 'despesa'}
                     />
                   </div>

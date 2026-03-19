@@ -373,24 +373,89 @@ export function Veiculos({ vehicles, lancamentos, manutencoes, refetch, user }: 
     let maxOdometer = vehicle.initial_odometer;
     let maxFuelOdometer = vehicle.initial_odometer;
 
+    // Identify contracts for rented vehicles
+    const contracts: {
+      id: string;
+      name: string;
+      start_date: string;
+      end_date: string | null;
+      start_lancamento_id: string;
+      receitas: number;
+      despesas: number;
+      saldo: number;
+    }[] = [];
+
+    if (vehicle.type === 'rented') {
+      const contractStarts = vLancamentos
+        .filter(l => l.observacao && (l.observacao.startsWith('Pagamento inicial do contrato') || l.observacao.startsWith('Pagamento de renovação de contrato')))
+        .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
+
+      contractStarts.forEach((startL, index) => {
+        const nextStart = contractStarts[index + 1];
+        contracts.push({
+          id: startL.id,
+          name: index === 0 ? '1º Contrato' : `${index + 1}º Contrato`,
+          start_date: startL.data,
+          end_date: nextStart ? nextStart.data : vehicle.contract_end_date || null,
+          start_lancamento_id: startL.id,
+          receitas: 0,
+          despesas: 0,
+          saldo: 0
+        });
+      });
+    }
+
     vLancamentos.forEach(l => {
+      const valor = Number(l.valor);
       if (l.tipo === 'receita') {
-        totalReceitas += Number(l.valor);
+        totalReceitas += valor;
       } else {
-        totalDespesas += Number(l.valor);
+        totalDespesas += valor;
         
         if (l.odometer && l.odometer > maxOdometer) {
           maxOdometer = l.odometer;
         }
 
         if (l.fuel_liters && l.fuel_liters > 0) {
-          totalCombustivel += Number(l.valor);
+          totalCombustivel += valor;
           totalLitros += Number(l.fuel_liters);
           if (l.odometer && l.odometer > maxFuelOdometer) {
             maxFuelOdometer = l.odometer;
           }
         }
       }
+
+      // Assign to contract if rented
+      if (vehicle.type === 'rented' && contracts.length > 0) {
+        for (let i = 0; i < contracts.length; i++) {
+          const c = contracts[i];
+          const isLast = i === contracts.length - 1;
+          
+          if (l.id === c.start_lancamento_id) {
+            if (l.tipo === 'receita') c.receitas += valor;
+            else c.despesas += valor;
+            break;
+          }
+          
+          if (i === 0) {
+            if (isLast || !c.end_date || l.data <= c.end_date) {
+              if (l.tipo === 'receita') c.receitas += valor;
+              else c.despesas += valor;
+              break;
+            }
+          } else {
+            if (l.data > c.start_date && (isLast || !c.end_date || l.data <= c.end_date)) {
+              if (l.tipo === 'receita') c.receitas += valor;
+              else c.despesas += valor;
+              break;
+            }
+          }
+        }
+      }
+    });
+
+    contracts.forEach(c => {
+      c.saldo = c.receitas - c.despesas;
     });
 
     const lucroLiquido = totalReceitas - totalDespesas;
@@ -405,7 +470,8 @@ export function Veiculos({ vehicles, lancamentos, manutencoes, refetch, user }: 
       totalCombustivel,
       mediaKmL,
       kmRodado: kmRodadoTotal,
-      lastOdometer: maxOdometer
+      lastOdometer: maxOdometer,
+      contracts
     };
   };
 
@@ -728,6 +794,44 @@ export function Veiculos({ vehicles, lancamentos, manutencoes, refetch, user }: 
                       </div>
                     </div>
                   </div>
+
+                  {/* Section: Histórico de Contratos */}
+                  {v.type === 'rented' && metrics.contracts && metrics.contracts.length > 0 && (
+                    <div className="mb-8">
+                      <h4 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-indigo-500 dark:bg-indigo-400"></span>
+                        Histórico de Contratos
+                      </h4>
+                      <div className="space-y-3">
+                        {metrics.contracts.map((contract, idx) => (
+                          <div key={contract.id} className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                              <p className="font-bold text-gray-900 dark:text-gray-100">{contract.name}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {contract.start_date.split('-').reverse().join('/')} até {contract.end_date ? contract.end_date.split('-').reverse().join('/') : 'Atual'}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-6">
+                              <div>
+                                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Receitas</p>
+                                <p className="font-semibold text-sm text-[#059568] dark:text-[#10B981]">{formatCurrency(contract.receitas)}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Despesas</p>
+                                <p className="font-semibold text-sm text-[#EF4444] dark:text-[#F87171]">{formatCurrency(contract.despesas)}</p>
+                              </div>
+                              <div className="bg-gray-50 dark:bg-gray-800/50 px-3 py-2 rounded-lg border border-gray-100 dark:border-gray-700">
+                                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Saldo</p>
+                                <p className={`font-bold text-sm ${contract.saldo >= 0 ? 'text-[#059568] dark:text-[#10B981]' : 'text-[#EF4444] dark:text-[#F87171]'}`}>
+                                  {formatCurrency(contract.saldo)}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Section: Contrato */}
                   {v.type === 'rented' && (
